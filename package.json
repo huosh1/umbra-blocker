@@ -4,7 +4,7 @@
   "description": "Umbra - bloque apps et sites pendant une session de focus",
   "main": "main.js",
   "author": "Luca Silva",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "start": "electron .",

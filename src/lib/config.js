@@ -54,6 +54,8 @@ const SESSION_FILE = path.join(DATA_DIR, "session.json");
 const DECK_FILE = path.join(DATA_DIR, "deck.json");
 const SETTINGS_FILE = path.join(DATA_DIR, "settings.json");
 const PERIODS_FILE = path.join(DATA_DIR, "periods.json");
+const HISTORY_FILE = path.join(DATA_DIR, "history.json");
+const VOCAB_PROGRESS_FILE = path.join(DATA_DIR, "vocab_progress.json");
 const LOG_FILE = path.join(DATA_DIR, "watchdog.log");
 const WATCHDOG_PID_FILE = path.join(DATA_DIR, "watchdog.pid");
 const HOSTS_BACKUP = path.join(DATA_DIR, "hosts.backup");
@@ -95,6 +97,8 @@ module.exports = {
   DECK_FILE,
   SETTINGS_FILE,
   PERIODS_FILE,
+  HISTORY_FILE,
+  VOCAB_PROGRESS_FILE,
   LOG_FILE,
   WATCHDOG_PID_FILE,
   EXTENSION_DIR,

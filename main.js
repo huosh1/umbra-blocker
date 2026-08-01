@@ -26,6 +26,51 @@ if (MODE === "watchdog") {
   app.on("window-all-closed", () => {
     // pas de fenêtre : ne rien faire, le processus continue de tourner
   });
+} else if (MODE === "cleanup") {
+  // Retire tout ce qu'Umbra a posé au niveau système (hosts, règle
+  // pare-feu, raccourci de démarrage) et tue le watchdog s'il tourne encore
+  // - pour permettre de supprimer proprement le dossier de l'app sans rien
+  // laisser traîner. Doit tourner élevé (écrit hosts + gère le pare-feu).
+  app.disableHardwareAcceleration();
+  app.whenReady().then(async () => {
+    const { WATCHDOG_PID_FILE } = require("./src/lib/config");
+    if (fs.existsSync(WATCHDOG_PID_FILE)) {
+      const pid = parseInt(fs.readFileSync(WATCHDOG_PID_FILE, "utf-8").trim(), 10);
+      if (pid) {
+        try {
+          process.kill(pid);
+        } catch {
+          // déjà mort, tant mieux
+        }
+      }
+      try {
+        fs.unlinkSync(WATCHDOG_PID_FILE);
+      } catch {
+        // rien à faire si le fichier a déjà disparu
+      }
+    }
+    const session = require("./src/lib/session");
+    const s = session.load();
+    if (s.active) session.stop(s);
+    const blocker = require("./src/lib/blocker");
+    try {
+      blocker.removeSiteBlock();
+    } catch {
+      // pas grave, on essaie quand même le reste
+    }
+    try {
+      await blocker.removeDohBlock();
+    } catch {
+      // idem
+    }
+    try {
+      require("./src/lib/startup").uninstall();
+    } catch {
+      // idem
+    }
+    app.quit();
+  });
+  app.on("window-all-closed", () => {});
 } else if (MODE === "challenge") {
   // Lancement autonome (depuis le Démarrage Windows) : uniquement l'écran
   // de défi plein écran, pas de tableau de bord ni de tray.
@@ -101,7 +146,8 @@ function runGuiMode() {
     const periodsLib = require("./src/lib/periods");
     const settings = require("./src/lib/settings");
     const vocab = require("./src/lib/vocab");
-    const { WATCHDOG_PID_FILE, EXTENSION_DIR, BACKGROUND_DIR } = require("./src/lib/config");
+    const history = require("./src/lib/history");
+    const { WATCHDOG_PID_FILE, EXTENSION_DIR, BACKGROUND_DIR, VOCAB_PROGRESS_FILE } = require("./src/lib/config");
 
     function isWatchdogAlive() {
       if (!fs.existsSync(WATCHDOG_PID_FILE)) return false;
@@ -115,13 +161,10 @@ function runGuiMode() {
       }
     }
 
-    // Le watchdog doit écrire le fichier hosts et gérer une règle pare-feu :
-    // ça exige les droits admin sur Windows. On le lance élevé via
-    // "Start-Process -Verb RunAs" (déclenche l'invite UAC une fois, au
-    // premier démarrage de session). Le watchdog s'enregistre lui-même dans
-    // WATCHDOG_PID_FILE une fois lancé (voir plus bas, MODE === "watchdog").
-    function ensureWatchdog() {
-      if (isWatchdogAlive()) return;
+    // Lance ce même exe élevé, avec les args donnés (ex: ["--watchdog"]).
+    // Réutilisé pour le watchdog et pour le nettoyage avant désinstallation
+    // - toute opération qui touche hosts/pare-feu doit passer par ici.
+    function spawnElevated(extraArgs, onError) {
       const { spawn } = require("child_process");
       const fsSync = require("fs");
       // Chemin absolu plutôt que "powershell.exe" nu : un process Electron
@@ -133,8 +176,8 @@ function runGuiMode() {
         "System32", "WindowsPowerShell", "v1.0", "powershell.exe"
       );
       const exe = process.execPath;
-      const watchdogArgs = app.isPackaged ? ["--watchdog"] : [path.join(__dirname), "--watchdog"];
-      const argList = watchdogArgs.map((a) => `'${a.replace(/'/g, "''")}'`).join(",");
+      const fullArgs = app.isPackaged ? extraArgs : [path.join(__dirname), ...extraArgs];
+      const argList = fullArgs.map((a) => `'${a.replace(/'/g, "''")}'`).join(",");
       const psCommand = `Start-Process -FilePath '${exe.replace(/'/g, "''")}' -ArgumentList ${argList} -Verb RunAs -WindowStyle Hidden`;
       const encoded = Buffer.from(psCommand, "utf16le").toString("base64");
       try {
@@ -154,17 +197,29 @@ function runGuiMode() {
         child.on("error", (err) => {
           fsSync.appendFileSync(
             require("./src/lib/config").LOG_FILE,
-            `${new Date().toISOString()} ERROR failed to spawn elevated watchdog: ${err.message}\n`,
+            `${new Date().toISOString()} ERROR failed to spawn elevated process (${extraArgs.join(" ")}): ${err.message}\n`,
             "utf-8"
           );
+          if (onError) onError(err);
         });
       } catch (err) {
         fsSync.appendFileSync(
           require("./src/lib/config").LOG_FILE,
-          `${new Date().toISOString()} ERROR ensureWatchdog spawn threw: ${err.message}\n`,
+          `${new Date().toISOString()} ERROR spawnElevated threw (${extraArgs.join(" ")}): ${err.message}\n`,
           "utf-8"
         );
+        if (onError) onError(err);
       }
+    }
+
+    // Le watchdog doit écrire le fichier hosts et gérer une règle pare-feu :
+    // ça exige les droits admin sur Windows. On le lance élevé via
+    // "Start-Process -Verb RunAs" (déclenche l'invite UAC une fois, au
+    // premier démarrage de session). Le watchdog s'enregistre lui-même dans
+    // WATCHDOG_PID_FILE une fois lancé (voir plus bas, MODE === "watchdog").
+    function ensureWatchdog() {
+      if (isWatchdogAlive()) return;
+      spawnElevated(["--watchdog"]);
     }
 
     // Des périodes actives ne doivent pas dépendre d'un démarrage manuel de
@@ -258,6 +313,8 @@ function runGuiMode() {
       saveBlocklist(data);
       return { ok: true };
     });
+
+    ipcMain.handle("history:stats", () => history.getStats());
 
     ipcMain.handle("vocab:list", () => vocab.loadAll());
     ipcMain.handle("vocab:stats", () => vocab.getStats());
@@ -369,6 +426,61 @@ function runGuiMode() {
         startup.install();
       }
       return { installed: startup.isInstalled() };
+    });
+
+    ipcMain.handle("app:cleanup", () => {
+      spawnElevated(["--cleanup"]);
+      return { started: true };
+    });
+
+    ipcMain.handle("settings:exportAll", async () => {
+      const result = await dialog.showSaveDialog(mainWindow, {
+        title: "Exporter les réglages Umbra",
+        defaultPath: "umbra-backup.json",
+        filters: [{ name: "JSON", extensions: ["json"] }],
+      });
+      if (result.canceled || !result.filePath) return null;
+      let vocabProgress = {};
+      try {
+        vocabProgress = JSON.parse(fs.readFileSync(VOCAB_PROGRESS_FILE, "utf-8"));
+      } catch {
+        // pas encore de progression enregistrée, on exporte un objet vide
+      }
+      const bundle = {
+        exportedAt: new Date().toISOString(),
+        blocklist: loadBlocklist(),
+        deck: loadDeck(),
+        periods: periodsLib.load(),
+        settings: settings.load(),
+        vocabProgress,
+        history: history.load(),
+      };
+      fs.writeFileSync(result.filePath, JSON.stringify(bundle, null, 2), "utf-8");
+      return { ok: true, path: result.filePath };
+    });
+
+    ipcMain.handle("settings:importAll", async () => {
+      const result = await dialog.showOpenDialog(mainWindow, {
+        title: "Importer des réglages Umbra",
+        properties: ["openFile"],
+        filters: [{ name: "JSON", extensions: ["json"] }],
+      });
+      if (result.canceled || !result.filePaths[0]) return null;
+      let bundle;
+      try {
+        bundle = JSON.parse(fs.readFileSync(result.filePaths[0], "utf-8"));
+      } catch (err) {
+        return { ok: false, error: err.message };
+      }
+      if (bundle.blocklist) saveBlocklist(bundle.blocklist);
+      if (bundle.deck) saveDeck(bundle.deck);
+      if (bundle.periods) periodsLib.save(bundle.periods);
+      if (bundle.settings) settings.save(bundle.settings);
+      if (bundle.vocabProgress) {
+        fs.writeFileSync(VOCAB_PROGRESS_FILE, JSON.stringify(bundle.vocabProgress, null, 2), "utf-8");
+      }
+      if (bundle.history) history.save(bundle.history);
+      return { ok: true };
     });
   });
 

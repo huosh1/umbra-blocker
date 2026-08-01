@@ -135,6 +135,15 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round
 .card-header h2 { font-size: 13px; margin: 0; letter-spacing: .04em; text-transform: uppercase; color: var(--text-dim); }
 
 /* ---------- Session tab ---------- */
+.history-stats-bar { display: flex; gap: 12px; margin-bottom: 18px; }
+.history-stat {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 12px 8px; border-radius: var(--radius);
+  background: var(--panel); border: 1px solid var(--border);
+}
+.history-stat-value { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
+.history-stat-label { font-size: 12px; color: var(--text-dim); }
+
 .session-grid { display: grid; grid-template-columns: 260px 1fr; gap: 20px; align-items: stretch; }
 .timer-card { display: flex; flex-direction: column; align-items: center; padding: 24px 16px; }
 .ring-wrap { position: relative; width: 200px; height: 200px; }

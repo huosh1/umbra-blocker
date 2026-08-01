@@ -1,11 +1,15 @@
 const fs = require("fs");
+const path = require("path");
+const { Notification } = require("electron");
 const session = require("./session");
 const periods = require("./periods");
 const blocker = require("./blocker");
+const settings = require("./settings");
 const { loadBlocklist } = require("./blocklist");
 const { LOG_FILE } = require("./config");
 
 const POLL_MS = 2000;
+const ICON_PATH = path.join(__dirname, "..", "..", "assets", "icon.png");
 
 function log(message) {
   const line = `${new Date().toISOString()} ${message}\n`;
@@ -13,6 +17,48 @@ function log(message) {
     fs.appendFileSync(LOG_FILE, line, "utf-8");
   } catch {
     // pas grave si le log échoue, l'enforcement continue
+  }
+}
+
+const NOTIF_TEXT = {
+  fr: {
+    breakTitle: "Pause !",
+    breakBody: "Le temps de travail est terminé, profite de ta pause.",
+    workTitle: "Retour au travail !",
+    workBody: "La pause est terminée, prochain cycle de travail.",
+    doneTitle: "Session terminée",
+    doneBody: "Bravo, ta session de focus est terminée.",
+  },
+  en: {
+    breakTitle: "Break time!",
+    breakBody: "Work phase is over, enjoy your break.",
+    workTitle: "Back to work!",
+    workBody: "Break is over, next work cycle starting.",
+    doneTitle: "Session complete",
+    doneBody: "Nice, your focus session is done.",
+  },
+};
+
+// Le watchdog tourne indépendamment de la fenêtre GUI (souvent cachée ou
+// fermée) : c'est le seul processus garanti de voir passer ces transitions,
+// donc c'est lui qui doit déclencher les notifications système.
+function notify(key) {
+  if (!Notification.isSupported()) return;
+  let lang = "fr";
+  try {
+    lang = settings.load().language === "en" ? "en" : "fr";
+  } catch {
+    // pas grave, on garde le français par défaut
+  }
+  const text = NOTIF_TEXT[lang];
+  try {
+    new Notification({
+      title: text[`${key}Title`],
+      body: text[`${key}Body`],
+      icon: ICON_PATH,
+    }).show();
+  } catch (err) {
+    log(`ERROR notification failed: ${err.message}`);
   }
 }
 
@@ -31,6 +77,15 @@ function createEnforcer() {
   // les autres (ex. kill des apps bloquées) de s'exécuter.
   let blocksActive = false;
   let dohBlockApplied = false;
+
+  // État observé au tick précédent, pour détecter les transitions à notifier
+  // (travail -> pause, pause -> travail, session -> terminée) sans jamais
+  // notifier au tout premier tick (une session déjà en cours au démarrage du
+  // watchdog ne doit pas déclencher un faux "session terminée").
+  let notifInitialized = false;
+  let lastActive = false;
+  let lastKind = null;
+  let lastPhase = null;
 
   async function tick() {
     const s = session.load(); // fait aussi avancer les phases pomodoro dues
@@ -104,8 +159,21 @@ function createEnforcer() {
     if (s.kind === "custom" && s.active && session.remainingSeconds(s) <= 0) {
       const durationMinutes = (s.endTs - s.startTs) / 60000;
       log(`session terminee (${durationMinutes.toFixed(1)} min)`);
-      session.stop(s);
+      session.stop(s); // mute s.active à false en place
     }
+
+    const curPhase = s.kind === "pomodoro" && s.pomodoro ? s.pomodoro.phase : null;
+    if (notifInitialized) {
+      if (lastActive && !s.active) {
+        notify("done");
+      } else if (lastActive && s.active && lastKind === "pomodoro" && s.kind === "pomodoro" && lastPhase && curPhase && lastPhase !== curPhase) {
+        notify(curPhase === "break" ? "break" : "work");
+      }
+    }
+    notifInitialized = true;
+    lastActive = s.active;
+    lastKind = s.kind;
+    lastPhase = curPhase;
   }
 
   return { tick };

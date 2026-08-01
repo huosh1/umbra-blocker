@@ -1,5 +1,6 @@
 const fs = require("fs");
 const { SESSION_FILE } = require("./config");
+const history = require("./history");
 
 function defaultSession() {
   return {
@@ -29,6 +30,12 @@ function advancePomodoroIfDue(s) {
     if (p.cycleIndex + 1 >= p.cyclesTotal) {
       s.active = false;
       save(s);
+      history.append({
+        kind: "pomodoro",
+        hardMode: s.hardMode,
+        questName: s.questName,
+        focusedMinutes: p.cyclesTotal * p.workMinutes,
+      });
       return s;
     }
     p.phase = "break";
@@ -106,7 +113,32 @@ function canStop(s) {
   return remainingSeconds(s) <= 0;
 }
 
+// Temps réellement passé en phase "travail", même pour un arrêt manuel en
+// cours de route (pas juste la durée programmée) - c'est ça qui doit
+// remonter dans l'historique/les stats.
+function computeFocusedMinutes(s) {
+  if (s.kind === "custom") {
+    const elapsed = (Date.now() - s.startTs) / 60000;
+    const scheduled = (s.endTs - s.startTs) / 60000;
+    return Math.max(0, Math.min(elapsed, scheduled));
+  }
+  const p = s.pomodoro;
+  if (p.phase === "work") {
+    const partial = Math.max(0, Math.min((Date.now() - s.startTs) / 60000, p.workMinutes));
+    return p.cycleIndex * p.workMinutes + partial;
+  }
+  return (p.cycleIndex + 1) * p.workMinutes; // en pause : le cycle de travail qui y a mené est complet
+}
+
 function stop(s) {
+  if (s.active) {
+    history.append({
+      kind: s.kind,
+      hardMode: s.hardMode,
+      questName: s.questName,
+      focusedMinutes: computeFocusedMinutes(s),
+    });
+  }
   s.active = false;
   save(s);
   return s;

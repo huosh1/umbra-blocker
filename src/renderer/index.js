@@ -132,7 +132,22 @@ async function refreshSession() {
     focusView.classList.add("hidden");
     backToFocusBtn.classList.add("hidden");
   }
+  if (lastSessionActive && !s.active) refreshHistoryStats();
   lastSessionActive = s.active;
+}
+
+const statToday = document.getElementById("stat-today");
+const statStreak = document.getElementById("stat-streak");
+const statWeek = document.getElementById("stat-week");
+function formatStatMinutes(min) {
+  if (min >= 60) return `${Math.floor(min / 60)}h${String(min % 60).padStart(2, "0")}`;
+  return `${min}min`;
+}
+async function refreshHistoryStats() {
+  const stats = await window.umbra.getHistoryStats();
+  statToday.textContent = formatStatMinutes(stats.todayMinutes);
+  statStreak.textContent = String(stats.streakDays);
+  statWeek.textContent = formatStatMinutes(stats.weekMinutes);
 }
 
 document.getElementById("btn-start").addEventListener("click", async () => {
@@ -164,6 +179,7 @@ async function doStop(feedbackEl) {
     feedbackEl.textContent = t("session.hardModeBlocked", { min: remaining });
   } else {
     feedbackEl.textContent = "";
+    refreshHistoryStats();
   }
   refreshSession();
 }
@@ -762,6 +778,20 @@ document.getElementById("btn-save-settings").addEventListener("click", async () 
   showToast(t("settings.saved"));
 });
 
+document.getElementById("btn-export-settings").addEventListener("click", async () => {
+  const result = await window.umbra.exportSettings();
+  if (result && result.ok) showToast(t("settings.exportDone"));
+});
+document.getElementById("btn-import-settings").addEventListener("click", async () => {
+  const result = await window.umbra.importSettings();
+  if (result && result.ok) showToast(t("settings.importDone"));
+});
+
+document.getElementById("btn-cleanup").addEventListener("click", async () => {
+  await window.umbra.cleanupBeforeUninstall();
+  showToast(t("settings.cleanupDone"));
+});
+
 // ---------- Particules (vue focus) ----------
 const particles = createParticles(document.getElementById("focus-particles"));
 particles.start();
@@ -822,4 +852,5 @@ refreshSpotify();
   renderStartupStatus(await window.umbra.getStartupStatus());
   await loadVocab();
   refreshSession();
+  refreshHistoryStats();
 })();

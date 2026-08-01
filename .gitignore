@@ -7,5 +7,6 @@ data/hosts.backup
 data/settings.json
 data/periods.json
 data/vocab_progress.json
+data/history.json
 data/background/*
 !data/background/.gitkeep

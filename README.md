@@ -71,6 +71,23 @@ already points at the unpacked exe.
 Optional: build a proper NSIS installer instead of a portable exe with
 `npm run build:installer`.
 
+## Windows SmartScreen warning
+
+The exe isn't code-signed (a signing certificate costs money and requires a
+registered identity), so Windows SmartScreen will show **"Windows protected
+your PC"** the first time you run it. This is expected for any app built
+from source without a paid certificate — it doesn't mean anything was
+detected, just that the publisher isn't (yet) verified.
+
+To run it anyway: click **More info**, then **Run anyway**.
+
+If you'd rather not trust a random binary, the
+[`build.yml`](.github/workflows/build.yml) GitHub Actions workflow builds
+`dist/win-unpacked` straight from this repo's source on every push, so you
+can compare a release against a build you triggered yourself (Actions tab →
+select a run → download the `umbra-windows` artifact), or just build
+locally with `npm run build` as described above.
+
 ## Why does it ask for admin rights?
 
 Blocking sites requires writing to `C:\Windows\System32\drivers\etc\hosts`
@@ -103,6 +120,5 @@ data/                   Default blocklist, deck, and vocab content (bundled at b
 
 ## License
 
-Personal project, no license file — do what you want with the code, just
-don't hold me responsible for anything. Third-party asset/data licenses are
+MIT — see [LICENSE](LICENSE). Third-party asset/data licenses are
 documented where used (see `data/vocab/SOURCE.md`).

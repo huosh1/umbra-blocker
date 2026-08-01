@@ -50,6 +50,21 @@
           <button class="mode-btn" data-mode="pomodoro" data-i18n="session.modePomodoro">Pomodoro</button>
         </div>
 
+        <div id="history-stats-bar" class="history-stats-bar">
+          <div class="history-stat">
+            <span id="stat-today" class="history-stat-value">0min</span>
+            <span class="history-stat-label" data-i18n="session.statToday">Aujourd'hui</span>
+          </div>
+          <div class="history-stat">
+            <span id="stat-streak" class="history-stat-value">0</span>
+            <span class="history-stat-label" data-i18n="session.statStreak">Jours de série</span>
+          </div>
+          <div class="history-stat">
+            <span id="stat-week" class="history-stat-value">0min</span>
+            <span class="history-stat-label" data-i18n="session.statWeek">Cette semaine</span>
+          </div>
+        </div>
+
         <div class="session-grid">
           <div class="card timer-card">
             <div class="ring-wrap">
@@ -296,6 +311,21 @@
           <div class="card-header"><h2 data-i18n="settings.spotify">Spotify</h2></div>
           <p class="extension-desc" data-i18n="settings.spotifyDesc">Affiche la pochette et le titre en cours dans la vue focus, si Spotify tourne sur cette machine.</p>
           <div id="spotify-preview" class="spotify-preview-row"></div>
+        </div>
+
+        <div class="card settings-spacing">
+          <div class="card-header"><h2 data-i18n="settings.backup">Sauvegarde des réglages</h2></div>
+          <p class="extension-desc" data-i18n="settings.backupDesc">Exporte blocklist, périodes, vocabulaire (progression) et réglages dans un seul fichier, à réimporter sur un autre PC ou après réinstallation.</p>
+          <div class="bg-actions">
+            <button id="btn-export-settings" class="btn btn-ghost btn-sm" data-i18n="settings.export">Exporter</button>
+            <button id="btn-import-settings" class="btn btn-ghost btn-sm" data-i18n="settings.importSettings">Importer</button>
+          </div>
+        </div>
+
+        <div class="card settings-spacing">
+          <div class="card-header"><h2 data-i18n="settings.uninstall">Avant de désinstaller</h2></div>
+          <p class="extension-desc" data-i18n="settings.uninstallDesc">Retire la règle pare-feu, le blocage hosts et le raccourci de démarrage, et arrête le processus watchdog. Ne touche pas à tes données (vocabulaire, listes) - fais-le juste avant de supprimer le dossier de l'app.</p>
+          <button id="btn-cleanup" class="btn btn-outline" data-i18n="settings.cleanupBtn">Nettoyer avant désinstallation</button>
         </div>
 
         <button id="btn-save-settings" class="btn btn-primary btn-wide" data-i18n="settings.save">Enregistrer les réglages</button>

@@ -20,11 +20,15 @@ contextBridge.exposeInMainWorld("umbra", {
   saveSettings: (data) => ipcRenderer.invoke("settings:save", data),
   pickBackground: () => ipcRenderer.invoke("settings:pickBackground"),
   clearBackground: () => ipcRenderer.invoke("settings:clearBackground"),
+  exportSettings: () => ipcRenderer.invoke("settings:exportAll"),
+  importSettings: () => ipcRenderer.invoke("settings:importAll"),
 
   getDeck: () => ipcRenderer.invoke("deck:get"),
   saveDeck: (data) => ipcRenderer.invoke("deck:save", data),
   pickSessionDeck: () => ipcRenderer.invoke("deck:pickSession"),
   testChallenge: () => ipcRenderer.invoke("challenge:test"),
+
+  getHistoryStats: () => ipcRenderer.invoke("history:stats"),
 
   getVocab: () => ipcRenderer.invoke("vocab:list"),
   getVocabStats: () => ipcRenderer.invoke("vocab:stats"),
@@ -33,6 +37,7 @@ contextBridge.exposeInMainWorld("umbra", {
 
   getStartupStatus: () => ipcRenderer.invoke("startup:status"),
   toggleStartup: () => ipcRenderer.invoke("startup:toggle"),
+  cleanupBeforeUninstall: () => ipcRenderer.invoke("app:cleanup"),
 
   getSpotifyNowPlaying: () => ipcRenderer.invoke("spotify:nowPlaying"),
 
