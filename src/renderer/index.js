@@ -478,6 +478,12 @@ document.getElementById("period-btn-add-site").addEventListener("click", () => {
 document.getElementById("period-input-add-site").addEventListener("keydown", (e) => {
   if (e.key === "Enter") document.getElementById("period-btn-add-site").click();
 });
+document.getElementById("btn-period-copy-global").addEventListener("click", () => {
+  editingPeriod.apps = [...currentBlocklist.apps];
+  editingPeriod.sites = [...currentBlocklist.sites];
+  renderPeriodLists();
+  showToast(t("periods.copyGlobalDone"));
+});
 document.getElementById("btn-period-lists-close").addEventListener("click", () => {
   periodListsOverlay.classList.add("hidden");
 });
