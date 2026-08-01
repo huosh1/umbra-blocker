@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' file: data:; media-src 'self' file:;" />
+<title>Umbra — Focus Blocker</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="titlebar">
+    <div class="titlebar-drag">
+      <img class="titlebar-logo" src="../../assets/icon.png" alt="" />
+      <span class="titlebar-title">Umbra</span>
+    </div>
+    <div class="titlebar-controls">
+      <button id="btn-minimize" class="titlebar-btn" title="Réduire">&#8211;</button>
+      <button id="btn-hide" class="titlebar-btn" title="Fermer (continue en arrière-plan)">&times;</button>
+    </div>
+  </div>
+
+  <button id="btn-back-to-focus" class="back-to-focus-btn hidden" data-i18n="session.backToFocus">Revenir à la vue focus</button>
+
+  <div class="shell">
+    <nav class="sidebar">
+      <button class="side-tab active" data-tab="session" title="Session">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+      </button>
+      <button class="side-tab" data-tab="blocklist" title="Blocages">
+        <svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></svg>
+      </button>
+      <button class="side-tab" data-tab="deck" title="Défi du matin">
+        <svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15.5A2.5 2.5 0 0 1 16.5 21H4z"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H19"/></svg>
+      </button>
+      <button class="side-tab" data-tab="vocab" title="Vocabulaire">
+        <svg viewBox="0 0 24 24"><rect x="4" y="3" width="13" height="17" rx="2"/><path d="M8 8h5M8 12h5M8 16h3"/></svg>
+      </button>
+      <button class="side-tab" data-tab="periods" title="Périodes">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+      </button>
+      <button class="side-tab" data-tab="settings" title="Réglages">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </nav>
+
+    <main class="content">
+
+      <section id="tab-session" class="tab active">
+        <div class="mode-switch">
+          <button class="mode-btn active" data-mode="custom" data-i18n="session.modeCustom">Libre</button>
+          <button class="mode-btn" data-mode="pomodoro" data-i18n="session.modePomodoro">Pomodoro</button>
+        </div>
+
+        <div class="session-grid">
+          <div class="card timer-card">
+            <div class="ring-wrap">
+              <svg class="ring" viewBox="0 0 200 200">
+                <circle class="ring-track" cx="100" cy="100" r="88"/>
+                <circle id="ring-progress" class="ring-progress" cx="100" cy="100" r="88"/>
+              </svg>
+              <div class="ring-center">
+                <div id="timer-text" class="timer-text">00:00:00</div>
+                <div id="status-text" class="status-text" data-i18n="session.noSession">Aucune session en cours</div>
+              </div>
+            </div>
+            <div id="stop-feedback" class="stop-feedback"></div>
+            <button id="btn-stop" class="btn btn-outline" disabled data-i18n="session.stop">Arrêter la session</button>
+          </div>
+
+          <div class="card form-card">
+            <div id="panel-custom" class="mode-panel">
+              <label class="field-label" data-i18n="session.quest">Quête / objectif</label>
+              <input id="input-quest" class="field-input" type="text" data-i18n-placeholder="session.questPlaceholder" placeholder="Ex : Réviser le chapitre 5" />
+
+              <label class="field-label" data-i18n="session.duration">Durée (minutes)</label>
+              <div id="duration-presets" class="preset-row"></div>
+              <input id="input-duration" class="field-input" type="number" min="1" placeholder="60" />
+
+              <div class="switch-row">
+                <label class="switch">
+                  <input id="input-hardmode" type="checkbox" />
+                  <span class="switch-track"><span class="switch-thumb"></span></span>
+                </label>
+                <div class="switch-label">
+                  <strong data-i18n="session.hardModeTitle">Hard Mode</strong>
+                  <span data-i18n="session.hardModeDesc">Verrouillé jusqu'à la fin du minuteur — seule une fermeture volontaire du processus watchdog peut interrompre.</span>
+                </div>
+              </div>
+
+              <button id="btn-start" class="btn btn-primary" data-i18n="session.start">Commencer la session</button>
+            </div>
+
+            <div id="panel-pomodoro" class="mode-panel hidden">
+              <label class="field-label" data-i18n="session.quest">Quête / objectif</label>
+              <input id="input-quest-pomo" class="field-input" type="text" data-i18n-placeholder="session.questPlaceholder" placeholder="Ex : Réviser le chapitre 5" />
+
+              <div class="field-row">
+                <div>
+                  <label class="field-label" data-i18n="session.workMinutes">Travail (minutes)</label>
+                  <input id="input-pomo-work" class="field-input" type="number" min="1" value="25" />
+                </div>
+                <div>
+                  <label class="field-label" data-i18n="session.breakMinutes">Pause (minutes)</label>
+                  <input id="input-pomo-break" class="field-input" type="number" min="1" value="5" />
+                </div>
+              </div>
+              <label class="field-label" data-i18n="session.cycles">Nombre de cycles</label>
+              <input id="input-pomo-cycles" class="field-input" type="number" min="1" value="4" />
+
+              <div class="switch-row">
+                <label class="switch">
+                  <input id="input-hardmode-pomo" type="checkbox" />
+                  <span class="switch-track"><span class="switch-thumb"></span></span>
+                </label>
+                <div class="switch-label">
+                  <strong data-i18n="session.hardModeTitle">Hard Mode</strong>
+                  <span data-i18n="session.hardModeDesc">Verrouillé jusqu'à la fin du minuteur — seule une fermeture volontaire du processus watchdog peut interrompre.</span>
+                </div>
+              </div>
+
+              <button id="btn-start-pomo" class="btn btn-primary" data-i18n="session.start">Commencer la session</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-blocklist" class="tab">
+        <div class="blocklist-grid">
+          <div class="card">
+            <div class="card-header">
+              <h2 data-i18n="blocklist.apps">Applications bloquées</h2>
+              <button id="btn-pick-app" class="btn btn-ghost btn-sm" data-i18n="blocklist.addFromRunning">+ Ajouter depuis les apps ouvertes</button>
+            </div>
+            <div id="apps-tags" class="tag-list"></div>
+            <div class="add-row">
+              <input id="input-add-app" class="field-input" type="text" data-i18n-placeholder="blocklist.addAppPlaceholder" placeholder="ex: Discord.exe" />
+              <button id="btn-add-app" class="btn btn-ghost btn-sm" data-i18n="blocklist.add">Ajouter</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 data-i18n="blocklist.sites">Sites bloqués</h2>
+            </div>
+            <div id="sites-tags" class="tag-list"></div>
+            <div class="add-row">
+              <input id="input-add-site" class="field-input" type="text" data-i18n-placeholder="blocklist.addSitePlaceholder" placeholder="ex: youtube.com" />
+              <button id="btn-add-site" class="btn btn-ghost btn-sm" data-i18n="blocklist.add">Ajouter</button>
+            </div>
+          </div>
+        </div>
+        <button id="btn-save-lists" class="btn btn-primary btn-wide" data-i18n="blocklist.save">Enregistrer les listes</button>
+
+        <div class="card extension-card">
+          <div class="card-header"><h2 data-i18n="blocklist.extensionTitle">Extension navigateur (recommandé)</h2></div>
+          <p class="extension-desc" data-i18n="blocklist.extensionDesc">
+            Le blocage système (hosts + pare-feu) couvre tout, mais une extension bloque
+            directement dans le navigateur — plus fiable, insensible aux résolveurs DNS
+            alternatifs, et affiche un écran de pause au lieu d'une erreur de connexion.
+          </p>
+          <ol class="extension-steps">
+            <li data-i18n="blocklist.extensionStep1">Clique "Ouvrir le dossier de l'extension" ci-dessous.</li>
+            <li><span data-i18n="blocklist.extensionStep2">Dans Vivaldi, va sur</span> <code>vivaldi://extensions</code></li>
+            <li data-i18n="blocklist.extensionStep3">Active "Mode développeur" (en haut à droite)</li>
+            <li data-i18n="blocklist.extensionStep4">Clique "Charger l'extension non empaquetée" et sélectionne le dossier ouvert</li>
+          </ol>
+          <button id="btn-open-extension" class="btn btn-outline" data-i18n="blocklist.openExtensionFolder">Ouvrir le dossier de l'extension</button>
+        </div>
+      </section>
+
+      <section id="tab-deck" class="tab">
+        <div class="card">
+          <div class="card-header">
+            <h2 data-i18n="deck.title">Défi du matin</h2>
+            <div class="deck-count">
+              <label for="input-cards-per-session" data-i18n="deck.cardsPerSession">Cartes par session</label>
+              <input id="input-cards-per-session" class="field-input field-input-sm" type="number" min="1" />
+            </div>
+          </div>
+          <p class="extension-desc" data-i18n="deck.sourceNote">Les mots viennent de l'onglet Vocabulaire (priorité aux mots "à revoir", puis "nouveau").</p>
+          <div class="deck-actions">
+            <button id="btn-test-challenge" class="btn btn-outline" data-i18n="deck.testNow">Tester maintenant</button>
+            <button id="btn-save-deck" class="btn btn-primary" data-i18n="deck.save">Enregistrer</button>
+          </div>
+        </div>
+
+        <div class="card startup-card">
+          <div class="card-header"><h2 data-i18n="deck.startupTitle">Lancement au démarrage de Windows</h2></div>
+          <p id="startup-status-text" class="startup-status-text"></p>
+          <button id="btn-toggle-startup" class="btn btn-outline"></button>
+        </div>
+      </section>
+
+      <section id="tab-vocab" class="tab">
+        <div class="card">
+          <div class="card-header">
+            <h2 data-i18n="vocab.title">Vocabulaire</h2>
+            <button id="btn-import-vocab" class="btn btn-ghost btn-sm" data-i18n="vocab.import">Importer une liste</button>
+          </div>
+          <div id="vocab-stats" class="vocab-stats"></div>
+          <div class="vocab-toolbar">
+            <input id="vocab-search" class="field-input" type="text" data-i18n-placeholder="vocab.searchPlaceholder" placeholder="Rechercher..." />
+            <div class="vocab-filters">
+              <button class="vocab-filter-btn active" data-filter="all" data-i18n="vocab.filterAll">Tous</button>
+              <button class="vocab-filter-btn" data-filter="new" data-i18n="vocab.filterNew">Nouveau</button>
+              <button class="vocab-filter-btn" data-filter="review" data-i18n="vocab.filterReview">À revoir</button>
+              <button class="vocab-filter-btn" data-filter="mastered" data-i18n="vocab.filterMastered">Maîtrisé</button>
+            </div>
+          </div>
+          <div id="vocab-list" class="vocab-list"></div>
+          <button id="btn-vocab-more" class="btn btn-ghost btn-wide hidden" data-i18n="vocab.loadMore">Charger plus</button>
+        </div>
+      </section>
+
+      <section id="tab-periods" class="tab">
+        <div class="card">
+          <div class="card-header"><h2 data-i18n="periods.title">Plages horaires récurrentes</h2></div>
+          <p class="extension-desc" data-i18n="periods.desc">Le blocage s'active automatiquement pendant ces plages, chaque semaine, sans avoir besoin de lancer une session.</p>
+          <div id="periods-list" class="periods-list"></div>
+          <button id="btn-add-period" class="btn btn-ghost btn-sm" data-i18n="periods.add">+ Ajouter une plage</button>
+          <button id="btn-save-periods" class="btn btn-primary btn-wide" data-i18n="periods.save">Enregistrer les plages</button>
+        </div>
+      </section>
+
+      <section id="tab-settings" class="tab">
+        <div class="card">
+          <div class="card-header"><h2 data-i18n="settings.theme">Thème</h2></div>
+          <div class="theme-row">
+            <button class="theme-btn" data-theme="umbra">
+              <span class="theme-swatch theme-swatch-umbra"></span>
+              <span data-i18n="settings.themeUmbra">Umbra</span>
+            </button>
+            <button class="theme-btn" data-theme="midnight">
+              <span class="theme-swatch theme-swatch-midnight"></span>
+              <span data-i18n="settings.themeMidnight">Minuit</span>
+            </button>
+            <button class="theme-btn" data-theme="lavender">
+              <span class="theme-swatch theme-swatch-lavender"></span>
+              <span data-i18n="settings.themeLavender">Lavande</span>
+            </button>
+            <button class="theme-btn" data-theme="sakura">
+              <span class="theme-swatch theme-swatch-sakura"></span>
+              <span data-i18n="settings.themeSakura">Sakura</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="card settings-spacing">
+          <div class="card-header"><h2 data-i18n="settings.language">Langue</h2></div>
+          <div class="lang-row">
+            <button class="lang-btn active" data-lang="fr">Français</button>
+            <button class="lang-btn" data-lang="en">English</button>
+          </div>
+        </div>
+
+        <div class="card settings-spacing">
+          <div class="card-header"><h2 data-i18n="settings.background">Fond d'écran (vue focus)</h2></div>
+          <p class="extension-desc" data-i18n="settings.backgroundDesc">Utilisé dans la vue plein écran affichée pendant une session active.</p>
+          <div id="background-preview" class="background-preview">
+            <video id="background-preview-video" class="background-preview-video hidden" muted loop autoplay></video>
+          </div>
+          <div class="bg-actions">
+            <button id="btn-pick-bg" class="btn btn-ghost btn-sm" data-i18n="settings.chooseImage">Choisir une image</button>
+            <button id="btn-clear-bg" class="btn btn-ghost btn-sm" data-i18n="settings.removeImage">Retirer l'image</button>
+          </div>
+          <div class="switch-row" style="margin-top:14px;">
+            <label class="switch">
+              <input id="input-blur" type="checkbox" checked />
+              <span class="switch-track"><span class="switch-thumb"></span></span>
+            </label>
+            <div class="switch-label">
+              <strong data-i18n="settings.blur">Flouter le fond</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="card settings-spacing">
+          <div class="card-header"><h2 data-i18n="settings.particles">Effet de particules</h2></div>
+          <div class="lang-row">
+            <button class="particle-btn active" data-particles="stars" data-i18n="settings.particlesStars">Étoiles</button>
+            <button class="particle-btn" data-particles="wind" data-i18n="settings.particlesWind">Vent</button>
+            <button class="particle-btn" data-particles="none" data-i18n="settings.particlesNone">Aucun</button>
+          </div>
+        </div>
+
+        <div class="card settings-spacing">
+          <div class="card-header"><h2 data-i18n="settings.durationPresets">Presets de durée (minutes)</h2></div>
+          <p class="extension-desc" data-i18n="settings.durationPresetsDesc">Boutons de raccourci affichés dans l'onglet Session (mode Libre).</p>
+          <div id="settings-presets" class="tag-list"></div>
+          <div class="add-row">
+            <input id="input-add-preset" class="field-input" type="number" min="1" placeholder="90" />
+            <button id="btn-add-preset" class="btn btn-ghost btn-sm" data-i18n="settings.addPreset">+ Ajouter</button>
+          </div>
+        </div>
+
+        <div class="card settings-spacing">
+          <div class="card-header"><h2 data-i18n="settings.spotify">Spotify</h2></div>
+          <p class="extension-desc" data-i18n="settings.spotifyDesc">Affiche la pochette et le titre en cours dans la vue focus, si Spotify tourne sur cette machine.</p>
+          <div id="spotify-preview" class="spotify-preview-row"></div>
+        </div>
+
+        <button id="btn-save-settings" class="btn btn-primary btn-wide" data-i18n="settings.save">Enregistrer les réglages</button>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ---------- Vue Focus (plein écran pendant une session active) ---------- -->
+  <div id="focus-view" class="focus-view hidden">
+    <div class="focus-bg" id="focus-bg"></div>
+    <video id="focus-bg-video" class="focus-bg focus-bg-video hidden" muted loop autoplay playsinline></video>
+    <canvas id="focus-particles" class="focus-particles"></canvas>
+    <button id="btn-focus-dashboard" class="focus-dashboard-btn" data-i18n="session.dashboard">Tableau de bord</button>
+    <div class="focus-content">
+      <div id="spotify-widget" class="spotify-widget hidden">
+        <div class="spotify-cover" id="spotify-cover-fallback">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        </div>
+        <img id="spotify-cover-img" class="spotify-cover hidden" alt="" />
+        <div class="spotify-meta">
+          <div id="spotify-title" class="spotify-title"></div>
+          <div id="spotify-artist" class="spotify-artist"></div>
+        </div>
+      </div>
+      <div class="focus-ring-wrap">
+        <svg class="ring focus-ring" viewBox="0 0 200 200">
+          <circle class="ring-track" cx="100" cy="100" r="88"/>
+          <circle id="focus-ring-progress" class="ring-progress" cx="100" cy="100" r="88"/>
+        </svg>
+        <div class="ring-center">
+          <div id="focus-timer-text" class="focus-timer-text">00:00:00</div>
+          <div id="focus-status-text" class="focus-status-text"></div>
+        </div>
+      </div>
+      <div id="focus-quest" class="focus-quest"></div>
+      <div id="focus-stop-feedback" class="stop-feedback"></div>
+      <button id="btn-focus-stop" class="btn btn-outline focus-stop-btn" data-i18n="session.stop">Arrêter la session</button>
+    </div>
+  </div>
+
+  <div id="picker-overlay" class="overlay hidden">
+    <div class="picker-modal">
+      <div class="picker-header">
+        <h2>Choisir une application</h2>
+        <button id="btn-picker-close" class="titlebar-btn">&times;</button>
+      </div>
+      <input id="picker-search" class="field-input" type="text" placeholder="Rechercher..." />
+      <div id="picker-list" class="picker-list"></div>
+    </div>
+  </div>
+
+  <div id="period-lists-overlay" class="overlay hidden">
+    <div class="picker-modal">
+      <div class="picker-header">
+        <h2 id="period-lists-title">Listes de la plage</h2>
+        <button id="btn-period-lists-close" class="titlebar-btn">&times;</button>
+      </div>
+      <div class="period-lists-body">
+        <div>
+          <div class="card-header"><h2 data-i18n="blocklist.apps">Applications bloquées</h2></div>
+          <div id="period-apps-tags" class="tag-list"></div>
+          <div class="add-row">
+            <input id="period-input-add-app" class="field-input" type="text" data-i18n-placeholder="blocklist.addAppPlaceholder" placeholder="ex: Discord.exe" />
+            <button id="period-btn-add-app" class="btn btn-ghost btn-sm" data-i18n="blocklist.add">Ajouter</button>
+          </div>
+        </div>
+        <div>
+          <div class="card-header"><h2 data-i18n="blocklist.sites">Sites bloqués</h2></div>
+          <div id="period-sites-tags" class="tag-list"></div>
+          <div class="add-row">
+            <input id="period-input-add-site" class="field-input" type="text" data-i18n-placeholder="blocklist.addSitePlaceholder" placeholder="ex: youtube.com" />
+            <button id="period-btn-add-site" class="btn btn-ghost btn-sm" data-i18n="blocklist.add">Ajouter</button>
+          </div>
+        </div>
+      </div>
+      <button id="btn-period-lists-done" class="btn btn-primary" data-i18n="periods.listsDone">Terminé</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="i18n.js"></script>
+  <script src="particles.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+{
+  "name": "umbra",
+  "version": "1.0.0",
+  "description": "Umbra - bloque apps et sites pendant une session de focus",
+  "main": "main.js",
+  "author": "Luca Silva",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "watchdog": "electron . --watchdog",
+    "challenge": "electron . --challenge",
+    "build": "electron-builder --win portable",
+    "build:installer": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.lucasilva.umbra",
+    "productName": "Umbra",
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "assets/**/*"
+    ],
+    "asarUnpack": [
+      "**/*.ps1"
+    ],
+    "extraResources": [
+      {
+        "from": "data/blocklist.json",
+        "to": "data-defaults/blocklist.json"
+      },
+      {
+        "from": "data/deck.json",
+        "to": "data-defaults/deck.json"
+      },
+      {
+        "from": "data/vocab",
+        "to": "data-defaults/vocab"
+      },
+      {
+        "from": "extension",
+        "to": "extension"
+      }
+    ],
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "icon": "assets/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "Umbra.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

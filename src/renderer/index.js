@@ -1,0 +1,808 @@
+const RING_CIRCUMFERENCE = 2 * Math.PI * 88; // r=88, cf. style.css
+
+let currentBlocklist = { apps: [], sites: [] };
+let currentDeck = { cards_per_session: 10, cards: [] };
+let currentSettings = null;
+let currentPeriods = { periods: [] };
+let focusViewDismissed = false;
+let lastSessionActive = false;
+let selectedMode = "custom";
+
+// ---------- Titlebar ----------
+document.getElementById("btn-minimize").addEventListener("click", () => window.umbra.minimizeWindow());
+document.getElementById("btn-hide").addEventListener("click", () => window.umbra.hideWindow());
+
+// ---------- Tabs ----------
+document.querySelectorAll(".side-tab").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".side-tab").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(`tab-${btn.dataset.tab}`).classList.add("active");
+  });
+});
+
+// ---------- Toast ----------
+let toastTimer = null;
+function showToast(message) {
+  const el = document.getElementById("toast");
+  el.textContent = message;
+  el.classList.remove("hidden");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.add("hidden"), 3200);
+}
+
+// ---------- Mode switch ----------
+document.querySelectorAll(".mode-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    selectedMode = btn.dataset.mode;
+    document.querySelectorAll(".mode-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("panel-custom").classList.toggle("hidden", selectedMode !== "custom");
+    document.getElementById("panel-pomodoro").classList.toggle("hidden", selectedMode !== "pomodoro");
+  });
+});
+
+// ---------- Duration presets ----------
+function renderDurationPresets() {
+  const container = document.getElementById("duration-presets");
+  container.innerHTML = "";
+  const presets = (currentSettings && currentSettings.durationPresets) || [25, 60, 180];
+  for (const minutes of presets) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "preset-chip";
+    chip.textContent = minutes >= 60 ? `${(minutes / 60).toFixed(minutes % 60 ? 1 : 0)}h` : `${minutes}min`;
+    chip.addEventListener("click", () => {
+      document.getElementById("input-duration").value = minutes;
+      container.querySelectorAll(".preset-chip").forEach((c) => c.classList.remove("active"));
+      chip.classList.add("active");
+    });
+    container.appendChild(chip);
+  }
+}
+document.getElementById("input-duration").addEventListener("input", (e) => {
+  document.querySelectorAll("#duration-presets .preset-chip").forEach((c) => {
+    c.classList.toggle("active", c.textContent === `${e.target.value}min` || c.textContent === `${e.target.value / 60}h`);
+  });
+});
+
+// ---------- Session (Libre + Pomodoro partagent le timer) ----------
+const timerText = document.getElementById("timer-text");
+const statusText = document.getElementById("status-text");
+const ringProgress = document.getElementById("ring-progress");
+const stopFeedback = document.getElementById("stop-feedback");
+const btnStart = document.getElementById("btn-start");
+const btnStop = document.getElementById("btn-stop");
+
+const focusView = document.getElementById("focus-view");
+const focusTimerText = document.getElementById("focus-timer-text");
+const focusStatusText = document.getElementById("focus-status-text");
+const focusRingProgress = document.getElementById("focus-ring-progress");
+const focusQuest = document.getElementById("focus-quest");
+const focusStopFeedback = document.getElementById("focus-stop-feedback");
+
+function formatHMS(totalSeconds) {
+  const s = Math.max(0, Math.round(totalSeconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return [h, m, sec].map((n) => String(n).padStart(2, "0")).join(":");
+}
+
+function phaseLabel(s) {
+  if (s.kind === "pomodoro") {
+    const phase = s.pomodoro.phase === "work" ? t("session.work") : t("session.break");
+    const cycle = `${t("session.cycle")} ${s.pomodoro.cycleIndex + 1}/${s.pomodoro.cyclesTotal}`;
+    return `${phase} — ${cycle}`;
+  }
+  return s.hardMode ? t("session.hardMode") : t("session.focusMode");
+}
+
+async function refreshSession() {
+  const s = await window.umbra.getSession();
+  if (s.active) {
+    const total = Math.max(1, (s.endTs - s.startTs) / 1000);
+    const remaining = s.remainingSeconds;
+    const frac = Math.max(0, Math.min(1, remaining / total));
+    const color = s.hardMode ? "var(--danger)" : "var(--accent)";
+
+    timerText.textContent = formatHMS(remaining);
+    statusText.textContent = `${phaseLabel(s)} — ${s.questName}`;
+    ringProgress.style.stroke = color;
+    ringProgress.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - frac));
+    btnStart.disabled = true;
+    btnStop.disabled = false;
+
+    focusTimerText.textContent = formatHMS(remaining);
+    focusStatusText.textContent = phaseLabel(s);
+    focusQuest.textContent = s.questName;
+    focusRingProgress.style.stroke = color;
+    focusRingProgress.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - frac));
+
+    if (!lastSessionActive) focusViewDismissed = false; // nouvelle session -> on montre la vue focus
+    if (!focusViewDismissed) focusView.classList.remove("hidden");
+    backToFocusBtn.classList.toggle("hidden", !focusViewDismissed);
+  } else {
+    timerText.textContent = "00:00:00";
+    statusText.textContent = t("session.noSession");
+    ringProgress.style.strokeDashoffset = String(RING_CIRCUMFERENCE);
+    btnStart.disabled = false;
+    btnStop.disabled = true;
+    focusView.classList.add("hidden");
+    backToFocusBtn.classList.add("hidden");
+  }
+  lastSessionActive = s.active;
+}
+
+document.getElementById("btn-start").addEventListener("click", async () => {
+  await saveLists();
+  const quest = document.getElementById("input-quest").value;
+  const minutes = parseInt(document.getElementById("input-duration").value, 10) || 60;
+  const hardMode = document.getElementById("input-hardmode").checked;
+  await window.umbra.startSession({ quest, minutes, hardMode });
+  stopFeedback.textContent = "";
+  refreshSession();
+});
+
+document.getElementById("btn-start-pomo").addEventListener("click", async () => {
+  await saveLists();
+  const quest = document.getElementById("input-quest-pomo").value;
+  const workMinutes = parseInt(document.getElementById("input-pomo-work").value, 10) || 25;
+  const breakMinutes = parseInt(document.getElementById("input-pomo-break").value, 10) || 5;
+  const cyclesTotal = parseInt(document.getElementById("input-pomo-cycles").value, 10) || 4;
+  const hardMode = document.getElementById("input-hardmode-pomo").checked;
+  await window.umbra.startPomodoro({ quest, workMinutes, breakMinutes, cyclesTotal, hardMode });
+  stopFeedback.textContent = "";
+  refreshSession();
+});
+
+async function doStop(feedbackEl) {
+  const res = await window.umbra.stopSession();
+  if (!res.ok) {
+    const remaining = Math.ceil(res.remainingSeconds / 60);
+    feedbackEl.textContent = t("session.hardModeBlocked", { min: remaining });
+  } else {
+    feedbackEl.textContent = "";
+  }
+  refreshSession();
+}
+btnStop.addEventListener("click", () => doStop(stopFeedback));
+document.getElementById("btn-focus-stop").addEventListener("click", () => doStop(focusStopFeedback));
+
+const backToFocusBtn = document.getElementById("btn-back-to-focus");
+document.getElementById("btn-focus-dashboard").addEventListener("click", () => {
+  focusViewDismissed = true;
+  focusView.classList.add("hidden");
+  refreshSession();
+});
+backToFocusBtn.addEventListener("click", () => {
+  focusViewDismissed = false;
+  refreshSession();
+});
+
+setInterval(refreshSession, 1000);
+
+// ---------- Blocklist ----------
+const appsTags = document.getElementById("apps-tags");
+const sitesTags = document.getElementById("sites-tags");
+
+function renderTags(container, items, onRemove) {
+  container.innerHTML = "";
+  for (const item of items) {
+    const tag = document.createElement("div");
+    tag.className = "tag";
+    const label = document.createElement("span");
+    label.textContent = item;
+    const remove = document.createElement("button");
+    remove.textContent = "×";
+    remove.addEventListener("click", () => onRemove(item));
+    tag.appendChild(label);
+    tag.appendChild(remove);
+    container.appendChild(tag);
+  }
+}
+
+function renderBlocklist() {
+  renderTags(appsTags, currentBlocklist.apps, (name) => {
+    currentBlocklist.apps = currentBlocklist.apps.filter((a) => a !== name);
+    renderBlocklist();
+  });
+  renderTags(sitesTags, currentBlocklist.sites, (site) => {
+    currentBlocklist.sites = currentBlocklist.sites.filter((s) => s !== site);
+    renderBlocklist();
+  });
+}
+
+async function saveLists() {
+  await window.umbra.saveBlocklist(currentBlocklist);
+}
+
+document.getElementById("btn-add-app").addEventListener("click", () => addApp());
+document.getElementById("input-add-app").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") addApp();
+});
+function addApp() {
+  const input = document.getElementById("input-add-app");
+  const name = input.value.trim();
+  if (name && !currentBlocklist.apps.includes(name)) {
+    currentBlocklist.apps.push(name);
+    renderBlocklist();
+  }
+  input.value = "";
+}
+
+document.getElementById("btn-add-site").addEventListener("click", () => addSite());
+document.getElementById("input-add-site").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") addSite();
+});
+function addSite() {
+  const input = document.getElementById("input-add-site");
+  const domain = input.value.trim().toLowerCase();
+  if (domain && !currentBlocklist.sites.includes(domain)) {
+    currentBlocklist.sites.push(domain);
+    renderBlocklist();
+  }
+  input.value = "";
+}
+
+document.getElementById("btn-save-lists").addEventListener("click", async () => {
+  await saveLists();
+  showToast(t("blocklist.saved"));
+});
+
+// ---------- Extension navigateur ----------
+document.getElementById("btn-open-extension").addEventListener("click", async () => {
+  await window.umbra.openExtensionFolder();
+});
+
+// ---------- App picker ----------
+const pickerOverlay = document.getElementById("picker-overlay");
+const pickerList = document.getElementById("picker-list");
+const pickerSearch = document.getElementById("picker-search");
+let allRunningApps = [];
+
+document.getElementById("btn-pick-app").addEventListener("click", async () => {
+  pickerOverlay.classList.remove("hidden");
+  pickerSearch.value = "";
+  pickerList.innerHTML = '<div class="picker-item" style="color:var(--text-dim)">Chargement...</div>';
+  allRunningApps = await window.umbra.listRunningApps();
+  renderPicker();
+  pickerSearch.focus();
+});
+
+document.getElementById("btn-picker-close").addEventListener("click", () => {
+  pickerOverlay.classList.add("hidden");
+});
+pickerOverlay.addEventListener("click", (e) => {
+  if (e.target === pickerOverlay) pickerOverlay.classList.add("hidden");
+});
+pickerSearch.addEventListener("input", renderPicker);
+
+function renderPicker() {
+  const query = pickerSearch.value.trim().toLowerCase();
+  const filtered = allRunningApps.filter((n) => !query || n.toLowerCase().includes(query));
+  pickerList.innerHTML = "";
+  if (filtered.length === 0) {
+    pickerList.innerHTML = '<div class="picker-item" style="color:var(--text-dim)">Aucun résultat</div>';
+    return;
+  }
+  for (const name of filtered) {
+    const btn = document.createElement("button");
+    btn.className = "picker-item";
+    btn.textContent = name;
+    btn.addEventListener("click", async () => {
+      if (!currentBlocklist.apps.includes(name)) {
+        currentBlocklist.apps.push(name);
+        renderBlocklist();
+        await saveLists();
+      }
+      pickerOverlay.classList.add("hidden");
+    });
+    pickerList.appendChild(btn);
+  }
+}
+
+// ---------- Deck (juste le nombre de mots par session ; le contenu vient de Vocabulaire) ----------
+const cardsPerSessionInput = document.getElementById("input-cards-per-session");
+
+function renderDeck() {
+  cardsPerSessionInput.value = currentDeck.cards_per_session;
+}
+
+cardsPerSessionInput.addEventListener("input", () => {
+  currentDeck.cards_per_session = parseInt(cardsPerSessionInput.value, 10) || 10;
+});
+
+document.getElementById("btn-save-deck").addEventListener("click", async () => {
+  await window.umbra.saveDeck(currentDeck);
+  showToast(t("deck.saved"));
+});
+
+document.getElementById("btn-test-challenge").addEventListener("click", () => {
+  window.umbra.testChallenge();
+});
+
+// ---------- Startup ----------
+const startupStatusText = document.getElementById("startup-status-text");
+const btnToggleStartup = document.getElementById("btn-toggle-startup");
+
+function renderStartupStatus({ installed, packaged }) {
+  if (!packaged) {
+    startupStatusText.textContent = t("deck.startupDevOnly");
+    btnToggleStartup.disabled = true;
+    btnToggleStartup.textContent = t("deck.startupUnavailable");
+    return;
+  }
+  btnToggleStartup.disabled = false;
+  startupStatusText.textContent = installed ? t("deck.startupActive") : t("deck.startupInactive");
+  btnToggleStartup.textContent = installed ? t("deck.startupDisable") : t("deck.startupEnable");
+}
+
+btnToggleStartup.addEventListener("click", async () => {
+  await window.umbra.toggleStartup();
+  renderStartupStatus(await window.umbra.getStartupStatus());
+});
+
+// ---------- Périodes ----------
+const periodsList = document.getElementById("periods-list");
+
+function renderPeriods() {
+  periodsList.innerHTML = "";
+  currentPeriods.periods.forEach((p, idx) => {
+    const row = document.createElement("div");
+    row.className = "period-row";
+
+    const enable = document.createElement("label");
+    enable.className = "switch period-enable";
+    enable.innerHTML = '<span class="switch-track"><span class="switch-thumb"></span></span>';
+    const enableInput = document.createElement("input");
+    enableInput.type = "checkbox";
+    enableInput.checked = p.enabled;
+    enableInput.addEventListener("change", () => { p.enabled = enableInput.checked; });
+    enable.prepend(enableInput);
+
+    const name = document.createElement("input");
+    name.className = "field-input period-name";
+    name.placeholder = t("periods.namePlaceholder");
+    name.value = p.name || "";
+    name.addEventListener("input", () => { p.name = name.value; });
+
+    const daysWrap = document.createElement("div");
+    daysWrap.className = "period-days";
+    for (let d = 0; d < 7; d++) {
+      const dayBtn = document.createElement("button");
+      dayBtn.type = "button";
+      dayBtn.className = "period-day-btn" + (p.days.includes(d) ? " active" : "");
+      dayBtn.textContent = t(`periods.days.${d}`);
+      dayBtn.addEventListener("click", () => {
+        if (p.days.includes(d)) p.days = p.days.filter((x) => x !== d);
+        else p.days.push(d);
+        dayBtn.classList.toggle("active");
+      });
+      daysWrap.appendChild(dayBtn);
+    }
+
+    const from = document.createElement("input");
+    from.type = "time";
+    from.className = "field-input period-time";
+    from.value = p.startTime || "08:00";
+    from.addEventListener("input", () => { p.startTime = from.value; });
+
+    const to = document.createElement("input");
+    to.type = "time";
+    to.className = "field-input period-time";
+    to.value = p.endTime || "12:00";
+    to.addEventListener("input", () => { p.endTime = to.value; });
+
+    const listsBtn = document.createElement("button");
+    listsBtn.className = "btn btn-ghost btn-sm period-lists-btn";
+    listsBtn.textContent = t("periods.editLists");
+    listsBtn.addEventListener("click", () => openPeriodLists(p));
+
+    const remove = document.createElement("button");
+    remove.className = "period-remove";
+    remove.textContent = "×";
+    remove.addEventListener("click", () => {
+      currentPeriods.periods.splice(idx, 1);
+      renderPeriods();
+    });
+
+    row.appendChild(enable);
+    row.appendChild(name);
+    row.appendChild(daysWrap);
+    row.appendChild(from);
+    row.appendChild(to);
+    row.appendChild(listsBtn);
+    row.appendChild(remove);
+    periodsList.appendChild(row);
+  });
+}
+
+document.getElementById("btn-add-period").addEventListener("click", () => {
+  currentPeriods.periods.push({
+    id: `p${Date.now()}`, name: "", enabled: true,
+    days: [1, 2, 3, 4, 5], startTime: "08:00", endTime: "12:00",
+    apps: [...currentBlocklist.apps], sites: [...currentBlocklist.sites],
+  });
+  renderPeriods();
+});
+
+// ---------- Listes par plage (modal) ----------
+const periodListsOverlay = document.getElementById("period-lists-overlay");
+const periodAppsTags = document.getElementById("period-apps-tags");
+const periodSitesTags = document.getElementById("period-sites-tags");
+let editingPeriod = null;
+
+function openPeriodLists(p) {
+  editingPeriod = p;
+  if (!Array.isArray(p.apps)) p.apps = [];
+  if (!Array.isArray(p.sites)) p.sites = [];
+  document.getElementById("period-lists-title").textContent = p.name || t("periods.editLists");
+  renderPeriodLists();
+  periodListsOverlay.classList.remove("hidden");
+}
+
+function renderPeriodLists() {
+  renderTags(periodAppsTags, editingPeriod.apps, (name) => {
+    editingPeriod.apps = editingPeriod.apps.filter((a) => a !== name);
+    renderPeriodLists();
+  });
+  renderTags(periodSitesTags, editingPeriod.sites, (site) => {
+    editingPeriod.sites = editingPeriod.sites.filter((s) => s !== site);
+    renderPeriodLists();
+  });
+}
+
+document.getElementById("period-btn-add-app").addEventListener("click", () => {
+  const input = document.getElementById("period-input-add-app");
+  const name = input.value.trim();
+  if (name && !editingPeriod.apps.includes(name)) {
+    editingPeriod.apps.push(name);
+    renderPeriodLists();
+  }
+  input.value = "";
+});
+document.getElementById("period-input-add-app").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("period-btn-add-app").click();
+});
+document.getElementById("period-btn-add-site").addEventListener("click", () => {
+  const input = document.getElementById("period-input-add-site");
+  const domain = input.value.trim().toLowerCase();
+  if (domain && !editingPeriod.sites.includes(domain)) {
+    editingPeriod.sites.push(domain);
+    renderPeriodLists();
+  }
+  input.value = "";
+});
+document.getElementById("period-input-add-site").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("period-btn-add-site").click();
+});
+document.getElementById("btn-period-lists-close").addEventListener("click", () => {
+  periodListsOverlay.classList.add("hidden");
+});
+document.getElementById("btn-period-lists-done").addEventListener("click", () => {
+  periodListsOverlay.classList.add("hidden");
+});
+periodListsOverlay.addEventListener("click", (e) => {
+  if (e.target === periodListsOverlay) periodListsOverlay.classList.add("hidden");
+});
+
+document.getElementById("btn-save-periods").addEventListener("click", async () => {
+  await window.umbra.savePeriods(currentPeriods);
+  showToast(t("periods.saved"));
+});
+
+// ---------- Vocabulaire ----------
+let allVocab = [];
+let vocabFilter = "all";
+let vocabQuery = "";
+let vocabVisibleCount = 40;
+const VOCAB_PAGE_SIZE = 40;
+
+async function loadVocab() {
+  allVocab = await window.umbra.getVocab();
+  vocabVisibleCount = VOCAB_PAGE_SIZE;
+  renderVocabStats();
+  renderVocabList();
+}
+
+async function renderVocabStats() {
+  const stats = await window.umbra.getVocabStats();
+  document.getElementById("vocab-stats").textContent = t("vocab.statsLine", stats);
+}
+
+function filteredVocab() {
+  const q = vocabQuery.trim().toLowerCase();
+  return allVocab.filter((w) => {
+    if (vocabFilter !== "all" && w.status !== vocabFilter) return false;
+    if (!q) return true;
+    return w.korean.toLowerCase().includes(q) || w.meaning.toLowerCase().includes(q);
+  });
+}
+
+function renderVocabList() {
+  const listEl = document.getElementById("vocab-list");
+  const moreBtn = document.getElementById("btn-vocab-more");
+  const filtered = filteredVocab();
+  const visible = filtered.slice(0, vocabVisibleCount);
+  listEl.innerHTML = "";
+
+  if (!visible.length) {
+    const empty = document.createElement("div");
+    empty.className = "vocab-word-meaning";
+    empty.textContent = t("vocab.noResults");
+    listEl.appendChild(empty);
+  }
+
+  for (const w of visible) {
+    const row = document.createElement("div");
+    row.className = "vocab-word-row";
+
+    const main = document.createElement("div");
+    main.className = "vocab-word-main";
+    const kr = document.createElement("div");
+    kr.className = "vocab-word-kr";
+    kr.textContent = w.korean;
+    const meaning = document.createElement("div");
+    meaning.className = "vocab-word-meaning";
+    meaning.textContent = w.meaning;
+    main.appendChild(kr);
+    main.appendChild(meaning);
+    if (w.example_kr) {
+      const ex = document.createElement("div");
+      ex.className = "vocab-word-example";
+      ex.textContent = `${w.example_kr}${w.example_fr ? " — " + w.example_fr : ""}`;
+      main.appendChild(ex);
+    }
+
+    const badges = document.createElement("div");
+    badges.className = "vocab-status-badges";
+    const statuses = [
+      ["new", "vocab.markNew"],
+      ["review", "vocab.markReview"],
+      ["mastered", "vocab.markMastered"],
+    ];
+    for (const [status, key] of statuses) {
+      const badge = document.createElement("button");
+      badge.className = `vocab-status-badge status-${status}` + (w.status === status ? " active" : "");
+      badge.textContent = t(key);
+      badge.addEventListener("click", async () => {
+        await window.umbra.setVocabStatus(w.id, status);
+        w.status = status;
+        renderVocabStats();
+        renderVocabList();
+      });
+      badges.appendChild(badge);
+    }
+
+    row.appendChild(main);
+    row.appendChild(badges);
+    listEl.appendChild(row);
+  }
+
+  moreBtn.classList.toggle("hidden", filtered.length <= vocabVisibleCount);
+}
+
+document.getElementById("vocab-search").addEventListener("input", (e) => {
+  vocabQuery = e.target.value;
+  vocabVisibleCount = VOCAB_PAGE_SIZE;
+  renderVocabList();
+});
+
+document.querySelectorAll(".vocab-filter-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".vocab-filter-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    vocabFilter = btn.dataset.filter;
+    vocabVisibleCount = VOCAB_PAGE_SIZE;
+    renderVocabList();
+  });
+});
+
+document.getElementById("btn-vocab-more").addEventListener("click", () => {
+  vocabVisibleCount += VOCAB_PAGE_SIZE;
+  renderVocabList();
+});
+
+document.getElementById("btn-import-vocab").addEventListener("click", async () => {
+  const result = await window.umbra.importVocab();
+  if (!result) return;
+  if (result.error || !result.count) {
+    showToast(t("vocab.importEmpty"));
+    return;
+  }
+  showToast(t("vocab.importResult", { count: result.count }));
+  await loadVocab();
+});
+
+// ---------- Réglages ----------
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+}
+document.querySelectorAll(".theme-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".theme-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentSettings.theme = btn.dataset.theme;
+    applyTheme(currentSettings.theme);
+  });
+});
+
+document.querySelectorAll(".lang-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".lang-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    setLanguage(btn.dataset.lang);
+    applyStaticTranslations();
+    renderDurationPresets();
+    renderDeck();
+    renderPeriods();
+    renderStartupStatus({ installed: btnToggleStartup.textContent === t("deck.startupDisable"), packaged: !btnToggleStartup.disabled });
+    renderVocabStats();
+    renderVocabList();
+    currentSettings.language = btn.dataset.lang;
+  });
+});
+
+document.querySelectorAll(".particle-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".particle-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentSettings.particles = btn.dataset.particles;
+    particles.setMode(currentSettings.particles);
+  });
+});
+
+function fileUrl(p) {
+  return `file:///${p.replace(/\\/g, "/")}`;
+}
+
+const backgroundPreview = document.getElementById("background-preview");
+const backgroundPreviewVideo = document.getElementById("background-preview-video");
+function renderBackgroundPreview() {
+  const { path: p, type } = currentSettings.background;
+  if (p && type === "video") {
+    backgroundPreview.style.backgroundImage = "none";
+    backgroundPreview.textContent = "";
+    backgroundPreviewVideo.src = fileUrl(p);
+    backgroundPreviewVideo.load();
+    backgroundPreviewVideo.classList.remove("hidden");
+  } else if (p) {
+    backgroundPreviewVideo.classList.add("hidden");
+    backgroundPreviewVideo.removeAttribute("src");
+    backgroundPreview.style.backgroundImage = `url("${fileUrl(p)}")`;
+    backgroundPreview.textContent = "";
+  } else {
+    backgroundPreviewVideo.classList.add("hidden");
+    backgroundPreviewVideo.removeAttribute("src");
+    backgroundPreview.style.backgroundImage = "none";
+    backgroundPreview.textContent = "—";
+  }
+}
+function applyFocusBackground() {
+  const focusBg = document.getElementById("focus-bg");
+  const focusBgVideo = document.getElementById("focus-bg-video");
+  const { path: p, type, blur } = currentSettings.background;
+  if (p && type === "video") {
+    focusBg.style.backgroundImage = "none";
+    focusBg.classList.remove("blur");
+    focusBgVideo.src = fileUrl(p);
+    focusBgVideo.load();
+    focusBgVideo.play().catch(() => {});
+    focusBgVideo.classList.remove("hidden");
+    focusBgVideo.classList.toggle("blur", !!blur);
+  } else {
+    focusBgVideo.classList.add("hidden");
+    focusBgVideo.removeAttribute("src");
+    focusBg.style.backgroundImage = p ? `url("${fileUrl(p)}")` : "none";
+    focusBg.classList.toggle("blur", !!blur);
+  }
+}
+
+document.getElementById("btn-pick-bg").addEventListener("click", async () => {
+  const picked = await window.umbra.pickBackground();
+  if (picked) {
+    currentSettings.background.path = picked.path;
+    currentSettings.background.type = picked.type;
+    renderBackgroundPreview();
+    applyFocusBackground();
+  }
+});
+document.getElementById("btn-clear-bg").addEventListener("click", async () => {
+  await window.umbra.clearBackground();
+  currentSettings.background.path = null;
+  currentSettings.background.type = null;
+  renderBackgroundPreview();
+  applyFocusBackground();
+});
+document.getElementById("input-blur").addEventListener("change", (e) => {
+  currentSettings.background.blur = e.target.checked;
+  applyFocusBackground();
+});
+
+const settingsPresets = document.getElementById("settings-presets");
+function renderSettingsPresets() {
+  renderTags(settingsPresets, currentSettings.durationPresets.map(String), (val) => {
+    currentSettings.durationPresets = currentSettings.durationPresets.filter((p) => String(p) !== val);
+    renderSettingsPresets();
+  });
+}
+document.getElementById("btn-add-preset").addEventListener("click", () => {
+  const input = document.getElementById("input-add-preset");
+  const val = parseInt(input.value, 10);
+  if (val > 0 && !currentSettings.durationPresets.includes(val)) {
+    currentSettings.durationPresets.push(val);
+    currentSettings.durationPresets.sort((a, b) => a - b);
+    renderSettingsPresets();
+  }
+  input.value = "";
+});
+
+document.getElementById("btn-save-settings").addEventListener("click", async () => {
+  await window.umbra.saveSettings(currentSettings);
+  renderDurationPresets();
+  showToast(t("settings.saved"));
+});
+
+// ---------- Particules (vue focus) ----------
+const particles = createParticles(document.getElementById("focus-particles"));
+particles.start();
+
+// ---------- Spotify (widget vue focus + aperçu Réglages) ----------
+const spotifyWidget = document.getElementById("spotify-widget");
+const spotifyTitle = document.getElementById("spotify-title");
+const spotifyArtist = document.getElementById("spotify-artist");
+const spotifyPreview = document.getElementById("spotify-preview");
+const spotifyCoverImg = document.getElementById("spotify-cover-img");
+const spotifyCoverFallback = document.getElementById("spotify-cover-fallback");
+
+async function refreshSpotify() {
+  const info = await window.umbra.getSpotifyNowPlaying();
+  if (info.title) {
+    spotifyWidget.classList.remove("hidden");
+    spotifyTitle.textContent = info.title;
+    spotifyArtist.textContent = info.artist;
+    spotifyPreview.textContent = `${info.title} — ${info.artist}`;
+    if (info.thumbnailDataUrl) {
+      spotifyCoverImg.src = info.thumbnailDataUrl;
+      spotifyCoverImg.classList.remove("hidden");
+      spotifyCoverFallback.classList.add("hidden");
+    } else {
+      spotifyCoverImg.classList.add("hidden");
+      spotifyCoverFallback.classList.remove("hidden");
+    }
+  } else {
+    spotifyWidget.classList.add("hidden");
+    spotifyPreview.textContent = "—";
+  }
+}
+setInterval(refreshSpotify, 4000);
+refreshSpotify();
+
+// ---------- Init ----------
+(async function init() {
+  currentSettings = await window.umbra.getSettings();
+  applyTheme(currentSettings.theme);
+  document.querySelectorAll(".theme-btn").forEach((b) => b.classList.toggle("active", b.dataset.theme === currentSettings.theme));
+  setLanguage(currentSettings.language);
+  applyStaticTranslations();
+  document.querySelectorAll(".lang-btn").forEach((b) => b.classList.toggle("active", b.dataset.lang === currentSettings.language));
+  document.querySelectorAll(".particle-btn").forEach((b) => b.classList.toggle("active", b.dataset.particles === currentSettings.particles));
+  document.getElementById("input-blur").checked = currentSettings.background.blur;
+  renderDurationPresets();
+  renderSettingsPresets();
+  renderBackgroundPreview();
+  applyFocusBackground();
+  particles.setMode(currentSettings.particles);
+
+  currentBlocklist = await window.umbra.getBlocklist();
+  renderBlocklist();
+  currentDeck = await window.umbra.getDeck();
+  renderDeck();
+  currentPeriods = await window.umbra.getPeriods();
+  renderPeriods();
+  renderStartupStatus(await window.umbra.getStartupStatus());
+  await loadVocab();
+  refreshSession();
+})();

@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Umbra — Focus Blocker",
+  "version": "1.0.0",
+  "description": "Bloque les sites distrayants pendant une session Umbra active.",
+  "permissions": ["declarativeNetRequest", "alarms", "tabs"],
+  "host_permissions": ["<all_urls>", "http://127.0.0.1/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["blocked.html", "blocked.js", "blocked.css"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "icons": {
+    "128": "icon.png"
+  }
+}

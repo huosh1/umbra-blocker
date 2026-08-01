@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+<title>Umbra — Défi du matin</title>
+<link rel="stylesheet" href="challenge.css" />
+</head>
+<body>
+  <div class="wrap">
+    <div class="eyebrow">DÉFI DU MATIN</div>
+    <div class="card">
+      <div id="progress" class="progress"></div>
+      <div id="card-text" class="card-text"></div>
+      <div id="card-example" class="card-example hidden"></div>
+    </div>
+    <button id="action-btn" class="action-btn">Voir la réponse</button>
+    <div id="status-actions" class="status-actions hidden">
+      <button id="btn-mastered" class="status-btn status-btn-mastered">Maîtrisé</button>
+      <button id="btn-review" class="status-btn status-btn-review">À revoir</button>
+      <button id="btn-next" class="status-btn status-btn-next">Suivant</button>
+    </div>
+    <div id="empty-state" class="empty-state hidden">
+      <p>Aucun mot à réviser pour l'instant — va dans l'onglet Vocabulaire pour en ajouter.</p>
+      <button id="skip-btn" class="action-btn">Continuer</button>
+    </div>
+  </div>
+  <script src="challenge.js"></script>
+</body>
+</html>

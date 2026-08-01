@@ -1,0 +1,11 @@
+node_modules/
+dist/
+data/session.json
+data/watchdog.pid
+data/watchdog.log
+data/hosts.backup
+data/settings.json
+data/periods.json
+data/vocab_progress.json
+data/background/*
+!data/background/.gitkeep

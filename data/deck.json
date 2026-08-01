@@ -1,0 +1,11 @@
+{
+  "cards_per_session": 10,
+  "cards": [
+    {"front": "안녕하세요", "back": "Bonjour"},
+    {"front": "감사합니다", "back": "Merci"},
+    {"front": "친구", "back": "Ami"},
+    {"front": "사랑해요", "back": "Je t'aime"},
+    {"front": "물", "back": "Eau"},
+    {"front": "좋아요", "back": "J'aime bien"}
+  ]
+}
