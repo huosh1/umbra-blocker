@@ -617,6 +617,13 @@ document.getElementById("btn-import-vocab").addEventListener("click", async () =
 });
 
 // ---------- Réglages ----------
+// Thème/langue/particules/flou s'appliquent ET se sauvegardent tout de
+// suite au clic - l'utilisateur ne doit pas avoir à deviner qu'il faut
+// aussi cliquer "Enregistrer les réglages" pour que ça survive un redémarrage.
+function saveSettingsNow() {
+  window.umbra.saveSettings(currentSettings);
+}
+
 function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
 }
@@ -626,6 +633,7 @@ document.querySelectorAll(".theme-btn").forEach((btn) => {
     btn.classList.add("active");
     currentSettings.theme = btn.dataset.theme;
     applyTheme(currentSettings.theme);
+    saveSettingsNow();
   });
 });
 
@@ -642,6 +650,7 @@ document.querySelectorAll(".lang-btn").forEach((btn) => {
     renderVocabStats();
     renderVocabList();
     currentSettings.language = btn.dataset.lang;
+    saveSettingsNow();
   });
 });
 
@@ -651,6 +660,7 @@ document.querySelectorAll(".particle-btn").forEach((btn) => {
     btn.classList.add("active");
     currentSettings.particles = btn.dataset.particles;
     particles.setMode(currentSettings.particles);
+    saveSettingsNow();
   });
 });
 
@@ -719,6 +729,7 @@ document.getElementById("btn-clear-bg").addEventListener("click", async () => {
 document.getElementById("input-blur").addEventListener("change", (e) => {
   currentSettings.background.blur = e.target.checked;
   applyFocusBackground();
+  saveSettingsNow();
 });
 
 const settingsPresets = document.getElementById("settings-presets");
