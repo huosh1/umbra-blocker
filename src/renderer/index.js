@@ -40,6 +40,11 @@ document.querySelectorAll(".mode-btn").forEach((btn) => {
     btn.classList.add("active");
     document.getElementById("panel-custom").classList.toggle("hidden", selectedMode !== "custom");
     document.getElementById("panel-pomodoro").classList.toggle("hidden", selectedMode !== "pomodoro");
+    document.getElementById("panel-periode").classList.toggle("hidden", selectedMode !== "periode");
+    if (selectedMode === "periode") {
+      refreshWatchdogStatus();
+      refreshActivePeriodsBanner();
+    }
   });
 });
 
@@ -363,6 +368,11 @@ btnToggleStartup.addEventListener("click", async () => {
 // ---------- Périodes ----------
 const periodsList = document.getElementById("periods-list");
 
+function todayKeyClient() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function renderPeriods() {
   periodsList.innerHTML = "";
   currentPeriods.periods.forEach((p, idx) => {
@@ -386,6 +396,7 @@ function renderPeriods() {
 
     const daysWrap = document.createElement("div");
     daysWrap.className = "period-days";
+    daysWrap.classList.toggle("hidden", !p.recurring);
     for (let d = 0; d < 7; d++) {
       const dayBtn = document.createElement("button");
       dayBtn.type = "button";
@@ -398,6 +409,23 @@ function renderPeriods() {
       });
       daysWrap.appendChild(dayBtn);
     }
+
+    // Sans récurrence, une plage ne s'applique qu'au jour où elle a été
+    // configurée (voir periods.js) - pas besoin de choisir des jours.
+    const recurToggle = document.createElement("button");
+    recurToggle.type = "button";
+    recurToggle.className = "period-recur-toggle";
+    function refreshRecurToggle() {
+      recurToggle.textContent = p.recurring ? t("periods.recurring") : t("periods.todayOnly");
+      recurToggle.classList.toggle("active", p.recurring);
+      daysWrap.classList.toggle("hidden", !p.recurring);
+    }
+    recurToggle.addEventListener("click", () => {
+      p.recurring = !p.recurring;
+      if (!p.recurring) p.date = todayKeyClient();
+      refreshRecurToggle();
+    });
+    refreshRecurToggle();
 
     const from = document.createElement("input");
     from.type = "time";
@@ -426,6 +454,7 @@ function renderPeriods() {
 
     row.appendChild(enable);
     row.appendChild(name);
+    row.appendChild(recurToggle);
     row.appendChild(daysWrap);
     row.appendChild(from);
     row.appendChild(to);
@@ -438,7 +467,8 @@ function renderPeriods() {
 document.getElementById("btn-add-period").addEventListener("click", () => {
   currentPeriods.periods.push({
     id: `p${Date.now()}`, name: "", enabled: true,
-    days: [1, 2, 3, 4, 5], startTime: "08:00", endTime: "12:00",
+    recurring: false, date: todayKeyClient(), days: [1, 2, 3, 4, 5],
+    startTime: "08:00", endTime: "12:00",
     apps: [...currentBlocklist.apps], sites: [...currentBlocklist.sites],
   });
   renderPeriods();
@@ -513,7 +543,61 @@ periodListsOverlay.addEventListener("click", (e) => {
 document.getElementById("btn-save-periods").addEventListener("click", async () => {
   await window.umbra.savePeriods(currentPeriods);
   showToast(t("periods.saved"));
+  setTimeout(refreshWatchdogStatus, 1500); // laisse le temps au watchdog de démarrer/répondre à l'invite UAC
+  refreshActivePeriodsBanner();
 });
+
+// ---------- Statut de protection (watchdog) ----------
+const watchdogStatusDot = document.getElementById("watchdog-status-dot");
+const watchdogStatusText = document.getElementById("watchdog-status-text");
+const btnWatchdogRetry = document.getElementById("btn-watchdog-retry");
+async function refreshWatchdogStatus() {
+  const { alive } = await window.umbra.getWatchdogStatus();
+  watchdogStatusDot.classList.toggle("alive", alive);
+  watchdogStatusText.textContent = t(alive ? "periods.statusActive" : "periods.statusInactive");
+  btnWatchdogRetry.classList.toggle("hidden", alive);
+}
+btnWatchdogRetry.addEventListener("click", async () => {
+  watchdogStatusText.textContent = t("periods.statusChecking");
+  await window.umbra.ensureWatchdog();
+  setTimeout(refreshWatchdogStatus, 2000); // laisse le temps de répondre à l'invite UAC
+});
+setInterval(() => {
+  if (!document.getElementById("panel-periode").classList.contains("hidden")) refreshWatchdogStatus();
+}, 5000);
+
+// Coupure rapide d'une plage active "pour aujourd'hui" (sans toucher à sa
+// config récurrente) - une plage bloque automatiquement, sans bouton
+// Démarrer, donc il faut un moyen tout aussi rapide d'en sortir en cas
+// d'oubli ou de misclick sur "activé".
+const activePeriodBanner = document.getElementById("active-period-banner");
+const activePeriodBannerText = document.getElementById("active-period-banner-text");
+const btnPausePeriodsToday = document.getElementById("btn-pause-periods-today");
+let activePeriodsNow = [];
+async function refreshActivePeriodsBanner() {
+  activePeriodsNow = await window.umbra.getActivePeriodsNow();
+  if (activePeriodsNow.length) {
+    const names = activePeriodsNow.map((p) => p.name || t("periods.namePlaceholder")).join(", ");
+    activePeriodBannerText.textContent = t("periods.activeNow", { names });
+    activePeriodBanner.classList.remove("hidden");
+  } else {
+    activePeriodBanner.classList.add("hidden");
+  }
+}
+btnPausePeriodsToday.addEventListener("click", async () => {
+  const today = todayKeyClient();
+  const activeIds = new Set(activePeriodsNow.map((p) => p.id));
+  currentPeriods.periods.forEach((p) => {
+    if (activeIds.has(p.id)) p.pausedDate = today;
+  });
+  await window.umbra.savePeriods(currentPeriods);
+  showToast(t("periods.pausedToast"));
+  renderPeriods();
+  refreshActivePeriodsBanner();
+});
+setInterval(() => {
+  if (!document.getElementById("panel-periode").classList.contains("hidden")) refreshActivePeriodsBanner();
+}, 5000);
 
 // ---------- Vocabulaire ----------
 let allVocab = [];

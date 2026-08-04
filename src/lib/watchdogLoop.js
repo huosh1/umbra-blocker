@@ -6,7 +6,7 @@ const periods = require("./periods");
 const blocker = require("./blocker");
 const settings = require("./settings");
 const { loadBlocklist } = require("./blocklist");
-const { LOG_FILE } = require("./config");
+const { LOG_FILE, WATCHDOG_PID_FILE } = require("./config");
 
 const POLL_MS = 2000;
 const ICON_PATH = path.join(__dirname, "..", "..", "assets", "icon.png");
@@ -179,13 +179,30 @@ function createEnforcer() {
   return { tick };
 }
 
+// process.kill(pid, 0) depuis le processus GUI (non élevé) n'est pas fiable
+// pour vérifier si CE watchdog (élevé) est vivant - Windows peut refuser la
+// requête à travers la frontière d'élévation (accès refusé alors même que
+// le process tourne). On préfère donc un heartbeat : le fichier pid est
+// réécrit à chaque tick, et le GUI juge le watchdog vivant si ce fichier a
+// été touché récemment (voir isWatchdogAlive() dans main.js), peu importe
+// qui peut ou non interroger le process par PID.
+function touchHeartbeat() {
+  try {
+    fs.writeFileSync(WATCHDOG_PID_FILE, String(process.pid), "utf-8");
+  } catch (err) {
+    log(`ERROR heartbeat write failed: ${err.message}`);
+  }
+}
+
 function start() {
   log("watchdog started");
+  touchHeartbeat();
   const enforcer = createEnforcer();
   tick();
   setInterval(tick, POLL_MS);
 
   function tick() {
+    touchHeartbeat();
     enforcer.tick().catch((err) => log(`ERROR unhandled: ${err.message}`));
   }
 }

@@ -15,6 +15,10 @@ contextBridge.exposeInMainWorld("umbra", {
 
   getPeriods: () => ipcRenderer.invoke("periods:get"),
   savePeriods: (data) => ipcRenderer.invoke("periods:save", data),
+  getActivePeriodsNow: () => ipcRenderer.invoke("periods:activeNow"),
+
+  getWatchdogStatus: () => ipcRenderer.invoke("watchdog:status"),
+  ensureWatchdog: () => ipcRenderer.invoke("watchdog:ensure"),
 
   getSettings: () => ipcRenderer.invoke("settings:get"),
   saveSettings: (data) => ipcRenderer.invoke("settings:save", data),

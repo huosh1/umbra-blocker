@@ -8,6 +8,10 @@
   "background": {
     "service_worker": "background.js"
   },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  },
   "web_accessible_resources": [
     {
       "resources": ["blocked.html", "blocked.js", "blocked.css"],

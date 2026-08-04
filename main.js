@@ -18,8 +18,8 @@ const ICON_PATH = path.join(__dirname, "assets", "icon.png");
 if (MODE === "watchdog") {
   app.disableHardwareAcceleration();
   app.whenReady().then(() => {
-    const { WATCHDOG_PID_FILE } = require("./src/lib/config");
-    fs.writeFileSync(WATCHDOG_PID_FILE, String(process.pid), "utf-8");
+    // watchdogLoop.start() écrit lui-même le fichier pid (et le "touche" à
+    // chaque tick en heartbeat, voir isWatchdogAlive() plus bas).
     require("./src/lib/watchdogLoop").start();
     require("./src/lib/localServer").start();
   });
@@ -149,13 +149,19 @@ function runGuiMode() {
     const history = require("./src/lib/history");
     const { WATCHDOG_PID_FILE, EXTENSION_DIR, BACKGROUND_DIR, VOCAB_PROGRESS_FILE } = require("./src/lib/config");
 
+    // Le GUI (non élevé) ne peut pas fiablement interroger un process
+    // élevé par PID via process.kill(pid, 0) - Windows peut refuser l'accès
+    // à travers la frontière d'élévation même si le process tourne bel et
+    // bien, ce qui faisait croire à tort qu'aucun watchdog n'était actif et
+    // en relançait un nouveau (et son invite UAC) en boucle. On se fie donc
+    // uniquement à la fraîcheur du heartbeat que le watchdog écrit à chaque
+    // tick (voir touchHeartbeat() dans watchdogLoop.js).
+    const WATCHDOG_HEARTBEAT_TIMEOUT_MS = require("./src/lib/watchdogLoop").POLL_MS * 4;
     function isWatchdogAlive() {
       if (!fs.existsSync(WATCHDOG_PID_FILE)) return false;
-      const pid = parseInt(fs.readFileSync(WATCHDOG_PID_FILE, "utf-8").trim(), 10);
-      if (!pid) return false;
       try {
-        process.kill(pid, 0);
-        return true;
+        const age = Date.now() - fs.statSync(WATCHDOG_PID_FILE).mtimeMs;
+        return age < WATCHDOG_HEARTBEAT_TIMEOUT_MS;
       } catch {
         return false;
       }
@@ -338,7 +344,14 @@ function runGuiMode() {
       }
     });
 
+    ipcMain.handle("watchdog:status", () => ({ alive: isWatchdogAlive() }));
+    ipcMain.handle("watchdog:ensure", () => {
+      ensureWatchdog();
+      return { ok: true };
+    });
+
     ipcMain.handle("periods:get", () => periodsLib.load());
+    ipcMain.handle("periods:activeNow", () => periodsLib.getActivePeriods(periodsLib.load()));
     ipcMain.handle("periods:save", (e, data) => {
       periodsLib.save(data);
       // Une période enregistrée doit pouvoir bloquer immédiatement si on est

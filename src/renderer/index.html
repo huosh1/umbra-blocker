@@ -34,9 +34,6 @@
       <button class="side-tab" data-tab="vocab" title="Vocabulaire">
         <svg viewBox="0 0 24 24"><rect x="4" y="3" width="13" height="17" rx="2"/><path d="M8 8h5M8 12h5M8 16h3"/></svg>
       </button>
-      <button class="side-tab" data-tab="periods" title="Périodes">
-        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
-      </button>
       <button class="side-tab" data-tab="settings" title="Réglages">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       </button>
@@ -48,6 +45,7 @@
         <div class="mode-switch">
           <button class="mode-btn active" data-mode="custom" data-i18n="session.modeCustom">Libre</button>
           <button class="mode-btn" data-mode="pomodoro" data-i18n="session.modePomodoro">Pomodoro</button>
+          <button class="mode-btn" data-mode="periode" data-i18n="session.modePeriode">Plage</button>
         </div>
 
         <div id="history-stats-bar" class="history-stats-bar">
@@ -133,6 +131,22 @@
               </div>
 
               <button id="btn-start-pomo" class="btn btn-primary" data-i18n="session.start">Commencer la session</button>
+            </div>
+
+            <div id="panel-periode" class="mode-panel hidden">
+              <div class="watchdog-status-row">
+                <span id="watchdog-status-dot" class="watchdog-status-dot"></span>
+                <span id="watchdog-status-text" class="watchdog-status-text" data-i18n="periods.statusChecking">Vérification...</span>
+                <button id="btn-watchdog-retry" class="btn btn-ghost btn-sm hidden" data-i18n="periods.retry">Réessayer</button>
+              </div>
+              <div id="active-period-banner" class="active-period-banner hidden">
+                <span id="active-period-banner-text"></span>
+                <button id="btn-pause-periods-today" class="btn btn-ghost btn-sm" data-i18n="periods.pauseToday">Désactiver aujourd'hui</button>
+              </div>
+              <p class="extension-desc" data-i18n="periods.desc">Le blocage s'active automatiquement pendant ces plages, sans avoir besoin de lancer une session.</p>
+              <div id="periods-list" class="periods-list"></div>
+              <button id="btn-add-period" class="btn btn-ghost btn-sm" data-i18n="periods.add">+ Ajouter une plage</button>
+              <button id="btn-save-periods" class="btn btn-primary btn-wide" data-i18n="periods.save">Enregistrer les plages</button>
             </div>
           </div>
         </div>
@@ -223,16 +237,6 @@
           </div>
           <div id="vocab-list" class="vocab-list"></div>
           <button id="btn-vocab-more" class="btn btn-ghost btn-wide hidden" data-i18n="vocab.loadMore">Charger plus</button>
-        </div>
-      </section>
-
-      <section id="tab-periods" class="tab">
-        <div class="card">
-          <div class="card-header"><h2 data-i18n="periods.title">Plages horaires récurrentes</h2></div>
-          <p class="extension-desc" data-i18n="periods.desc">Le blocage s'active automatiquement pendant ces plages, chaque semaine, sans avoir besoin de lancer une session.</p>
-          <div id="periods-list" class="periods-list"></div>
-          <button id="btn-add-period" class="btn btn-ghost btn-sm" data-i18n="periods.add">+ Ajouter une plage</button>
-          <button id="btn-save-periods" class="btn btn-primary btn-wide" data-i18n="periods.save">Enregistrer les plages</button>
         </div>
       </section>
 
