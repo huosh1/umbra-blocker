@@ -355,6 +355,12 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round
 .period-remove { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 18px; width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0; }
 .period-remove:hover { background: rgba(224,121,106,0.12); color: var(--danger); }
 .period-lists-btn { flex-shrink: 0; }
+.period-paused-badge {
+  flex-shrink: 0; border: 1px solid rgba(224,121,106,0.4); background: rgba(224,121,106,0.14); color: var(--danger);
+  padding: 6px 12px; border-radius: 999px; font-size: 12px; font-family: inherit; cursor: pointer; white-space: nowrap;
+}
+.period-paused-badge.hidden { display: none; }
+.period-paused-badge:hover { background: rgba(224,121,106,0.24); }
 
 .watchdog-status-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .watchdog-status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }

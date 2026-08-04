@@ -385,7 +385,18 @@ function renderPeriods() {
     const enableInput = document.createElement("input");
     enableInput.type = "checkbox";
     enableInput.checked = p.enabled;
-    enableInput.addEventListener("change", () => { p.enabled = enableInput.checked; });
+    enableInput.addEventListener("change", () => {
+      p.enabled = enableInput.checked;
+      // Rallumer l'interrupteur doit vraiment réactiver le blocage - sans
+      // ça, une pause "aujourd'hui" laissée par erreur (voir bouton
+      // Désactiver aujourd'hui) resterait active en silence même après
+      // avoir remis "enabled" sur ON, ce qui est exactement le genre de
+      // panne invisible qu'on veut éviter ici.
+      if (p.enabled && p.pausedDate) {
+        p.pausedDate = null;
+        renderPeriods();
+      }
+    });
     enable.prepend(enableInput);
 
     const name = document.createElement("input");
@@ -444,6 +455,18 @@ function renderPeriods() {
     listsBtn.textContent = t("periods.editLists");
     listsBtn.addEventListener("click", () => openPeriodLists(p));
 
+    // Rend visible une pause "aujourd'hui" active - sans ça, "enabled: true"
+    // dans la liste mais rien qui bloque est indiscernable d'un bug.
+    const pausedBadge = document.createElement("button");
+    pausedBadge.type = "button";
+    pausedBadge.className = "period-paused-badge" + (p.pausedDate === todayKeyClient() ? "" : " hidden");
+    pausedBadge.textContent = t("periods.pausedBadge");
+    pausedBadge.title = t("periods.pausedBadgeHint");
+    pausedBadge.addEventListener("click", () => {
+      p.pausedDate = null;
+      renderPeriods();
+    });
+
     const remove = document.createElement("button");
     remove.className = "period-remove";
     remove.textContent = "×";
@@ -459,6 +482,7 @@ function renderPeriods() {
     row.appendChild(from);
     row.appendChild(to);
     row.appendChild(listsBtn);
+    row.appendChild(pausedBadge);
     row.appendChild(remove);
     periodsList.appendChild(row);
   });
