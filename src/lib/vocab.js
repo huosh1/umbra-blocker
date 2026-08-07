@@ -87,6 +87,16 @@ function pickChallengeWords(n) {
   return [...review, ...fresh].slice(0, n);
 }
 
+// Session d'entraînement à la demande (onglet Vocabulaire) : contrairement
+// au défi du matin (priorité fixe review->nouveau, jamais de maîtrisé), on
+// laisse ici choisir librement quels statuts inclure - y compris rejouer
+// des mots déjà maîtrisés pour entretenir la mémoire.
+function pickPracticeWords({ statuses, count } = {}) {
+  const wanted = new Set(statuses && statuses.length ? statuses : ["new", "review", "mastered"]);
+  const words = shuffle(loadAll().filter((w) => wanted.has(w.status)));
+  return count ? words.slice(0, count) : words;
+}
+
 // ---------------------------------------------------------------------
 // Import de listes perso (.txt/.csv/.tsv/.json) - beaucoup de sites de
 // vocabulaire coréen (TOPIK, Anki shared decks...) exportent dans un de ces
@@ -177,4 +187,4 @@ function importFile(filePath) {
   return { count: toAdd.length, file: path.basename(destFile) };
 }
 
-module.exports = { loadAll, setStatus, getStats, pickChallengeWords, importFile };
+module.exports = { loadAll, setStatus, getStats, pickChallengeWords, pickPracticeWords, importFile };

@@ -208,18 +208,16 @@
           </div>
         </div>
 
-        <div class="card startup-card">
-          <div class="card-header"><h2 data-i18n="deck.startupTitle">Lancement au démarrage de Windows</h2></div>
-          <p id="startup-status-text" class="startup-status-text"></p>
-          <button id="btn-toggle-startup" class="btn btn-outline"></button>
-        </div>
       </section>
 
       <section id="tab-vocab" class="tab">
         <div class="card">
           <div class="card-header">
             <h2 data-i18n="vocab.title">Vocabulaire</h2>
-            <button id="btn-import-vocab" class="btn btn-ghost btn-sm" data-i18n="vocab.import">Importer une liste</button>
+            <div class="vocab-header-actions">
+              <button id="btn-open-practice" class="btn btn-primary btn-sm" data-i18n="practice.open">S'entraîner</button>
+              <button id="btn-import-vocab" class="btn btn-ghost btn-sm" data-i18n="vocab.import">Importer une liste</button>
+            </div>
           </div>
           <div id="vocab-stats" class="vocab-stats"></div>
           <div class="vocab-toolbar">
@@ -268,8 +266,8 @@
           <div class="card-header">
             <h2 data-i18n="stats.byQuest">Répartition par quête</h2>
             <div class="lang-row">
-              <button class="particle-btn active" data-range="7" data-i18n="stats.rangeWeek">Cette semaine</button>
-              <button class="particle-btn" data-range="all" data-i18n="stats.rangeAll">Tout</button>
+              <button class="toggle-btn active" data-range="7" data-i18n="stats.rangeWeek">Cette semaine</button>
+              <button class="toggle-btn" data-range="all" data-i18n="stats.rangeAll">Tout</button>
             </div>
           </div>
           <div id="quest-breakdown" class="quest-breakdown"></div>
@@ -292,6 +290,12 @@
       </section>
 
       <section id="tab-settings" class="tab">
+        <div class="card startup-card settings-spacing">
+          <div class="card-header"><h2 data-i18n="deck.startupTitle">Lancement au démarrage de Windows</h2></div>
+          <p id="startup-status-text" class="startup-status-text"></p>
+          <button id="btn-toggle-startup" class="btn btn-outline"></button>
+        </div>
+
         <div class="card">
           <div class="card-header"><h2 data-i18n="settings.theme">Thème</h2></div>
           <div class="theme-row">
@@ -478,6 +482,71 @@
         </div>
       </div>
       <button id="btn-period-lists-done" class="btn btn-primary" data-i18n="periods.listsDone">Terminé</button>
+    </div>
+  </div>
+
+  <div id="practice-config-overlay" class="overlay hidden">
+    <div class="picker-modal practice-config-modal">
+      <div class="picker-header">
+        <h2 data-i18n="practice.configTitle">S'entraîner</h2>
+        <button id="btn-practice-config-close" class="titlebar-btn">&times;</button>
+      </div>
+
+      <label class="field-label" data-i18n="practice.include">Mots à inclure</label>
+      <div class="practice-status-checks">
+        <label class="switch-row-inline">
+          <input id="practice-include-new" type="checkbox" checked />
+          <span data-i18n="vocab.filterNew">Nouveau</span>
+        </label>
+        <label class="switch-row-inline">
+          <input id="practice-include-review" type="checkbox" checked />
+          <span data-i18n="vocab.filterReview">À revoir</span>
+        </label>
+        <label class="switch-row-inline">
+          <input id="practice-include-mastered" type="checkbox" />
+          <span data-i18n="vocab.filterMastered">Maîtrisé</span>
+        </label>
+      </div>
+
+      <label class="field-label" data-i18n="practice.direction">Sens</label>
+      <div class="lang-row">
+        <button class="toggle-btn active" data-direction="kr-to-meaning" data-i18n="practice.directionKrToMeaning">Coréen → Sens</button>
+        <button class="toggle-btn" data-direction="meaning-to-kr" data-i18n="practice.directionMeaningToKr">Sens → Coréen</button>
+      </div>
+
+      <label class="field-label" data-i18n="practice.mode">Mode</label>
+      <div class="lang-row">
+        <button class="toggle-btn active" data-practice-mode="recognize" data-i18n="practice.modeRecognize">Reconnaître</button>
+        <button class="toggle-btn" data-practice-mode="write" data-i18n="practice.modeWrite">Écrire</button>
+      </div>
+
+      <label class="field-label" data-i18n="practice.count">Nombre de mots</label>
+      <input id="practice-count" class="field-input" type="number" min="1" value="20" />
+
+      <div id="practice-config-error" class="practice-config-error hidden"></div>
+      <button id="btn-practice-start" class="btn btn-primary btn-wide" data-i18n="practice.start">Commencer</button>
+    </div>
+  </div>
+
+  <div id="practice-session-overlay" class="practice-session hidden">
+    <button id="btn-practice-exit" class="practice-exit-btn">&times;</button>
+    <div class="practice-card">
+      <div id="practice-progress" class="progress"></div>
+      <div id="practice-prompt" class="card-text"></div>
+      <input id="practice-input" class="field-input practice-input hidden" type="text" autocomplete="off" />
+      <div id="practice-feedback" class="practice-feedback hidden"></div>
+      <div id="practice-example" class="card-example hidden"></div>
+    </div>
+    <button id="practice-check-btn" class="action-btn" data-i18n="practice.check">Vérifier</button>
+    <button id="practice-reveal-btn" class="action-btn hidden" data-i18n="practice.reveal">Voir la réponse</button>
+    <div id="practice-status-actions" class="status-actions hidden">
+      <button id="practice-btn-mastered" class="status-btn status-btn-mastered" data-i18n="practice.mastered">Maîtrisé</button>
+      <button id="practice-btn-review" class="status-btn status-btn-review" data-i18n="practice.review">À revoir</button>
+      <button id="practice-btn-next" class="status-btn status-btn-next" data-i18n="practice.next">Suivant</button>
+    </div>
+    <div id="practice-done" class="practice-done hidden">
+      <div id="practice-done-text" class="practice-done-text"></div>
+      <button id="btn-practice-done-close" class="action-btn" data-i18n="practice.finish">Terminer</button>
     </div>
   </div>
 

@@ -917,6 +917,191 @@ document.getElementById("btn-import-vocab").addEventListener("click", async () =
   await loadVocab();
 });
 
+// ---------- Entraînement vocabulaire ----------
+const practiceConfigOverlay = document.getElementById("practice-config-overlay");
+const practiceSessionOverlay = document.getElementById("practice-session-overlay");
+let practiceDirection = "kr-to-meaning";
+let practiceMode = "recognize";
+let practiceWords = [];
+let practiceIndex = 0;
+let practiceCorrectCount = 0;
+let practiceRevealed = false;
+
+document.getElementById("btn-open-practice").addEventListener("click", () => {
+  document.getElementById("practice-config-error").classList.add("hidden");
+  practiceConfigOverlay.classList.remove("hidden");
+});
+document.getElementById("btn-practice-config-close").addEventListener("click", () => {
+  practiceConfigOverlay.classList.add("hidden");
+});
+
+document.querySelectorAll(".practice-config-modal [data-direction]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".practice-config-modal [data-direction]").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    practiceDirection = btn.dataset.direction;
+  });
+});
+document.querySelectorAll(".practice-config-modal [data-practice-mode]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".practice-config-modal [data-practice-mode]").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    practiceMode = btn.dataset.practiceMode;
+  });
+});
+
+function normalizePracticeAnswer(s) {
+  return String(s || "").trim().toLowerCase();
+}
+
+function checkPracticeAnswer(typed, word) {
+  const t = normalizePracticeAnswer(typed);
+  if (!t) return false;
+  if (practiceDirection === "kr-to-meaning") {
+    const parts = String(word.meaning || "").split(/[,;/]/).map(normalizePracticeAnswer).filter(Boolean);
+    return parts.includes(t);
+  }
+  return normalizePracticeAnswer(word.korean).replace(/\s+/g, "") === t.replace(/\s+/g, "");
+}
+
+document.getElementById("btn-practice-start").addEventListener("click", async () => {
+  const statuses = [];
+  if (document.getElementById("practice-include-new").checked) statuses.push("new");
+  if (document.getElementById("practice-include-review").checked) statuses.push("review");
+  if (document.getElementById("practice-include-mastered").checked) statuses.push("mastered");
+  const count = parseInt(document.getElementById("practice-count").value, 10) || 20;
+  const errorEl = document.getElementById("practice-config-error");
+
+  if (!statuses.length) {
+    errorEl.textContent = t("practice.noWords");
+    errorEl.classList.remove("hidden");
+    return;
+  }
+
+  const words = await window.umbra.pickPracticeWords({ statuses, count });
+  if (!words.length) {
+    errorEl.textContent = t("practice.noWords");
+    errorEl.classList.remove("hidden");
+    return;
+  }
+  errorEl.classList.add("hidden");
+
+  practiceWords = words;
+  practiceIndex = 0;
+  practiceCorrectCount = 0;
+  document.querySelector(".practice-card").classList.remove("hidden");
+  document.getElementById("practice-done").classList.add("hidden");
+  practiceConfigOverlay.classList.add("hidden");
+  practiceSessionOverlay.classList.remove("hidden");
+  renderPracticeCard();
+});
+
+function renderPracticeCard() {
+  const w = practiceWords[practiceIndex];
+  practiceRevealed = false;
+
+  document.getElementById("practice-progress").textContent = `${practiceIndex + 1} / ${practiceWords.length}`;
+  document.getElementById("practice-prompt").textContent = practiceDirection === "kr-to-meaning" ? w.korean : w.meaning;
+
+  const exampleEl = document.getElementById("practice-example");
+  exampleEl.innerHTML = "";
+  exampleEl.classList.add("hidden");
+
+  const feedbackEl = document.getElementById("practice-feedback");
+  feedbackEl.textContent = "";
+  feedbackEl.className = "practice-feedback hidden";
+
+  document.getElementById("practice-status-actions").classList.add("hidden");
+
+  const input = document.getElementById("practice-input");
+  input.value = "";
+
+  if (practiceMode === "write") {
+    input.classList.remove("hidden");
+    input.focus();
+    document.getElementById("practice-check-btn").classList.remove("hidden");
+    document.getElementById("practice-reveal-btn").classList.add("hidden");
+  } else {
+    input.classList.add("hidden");
+    document.getElementById("practice-check-btn").classList.add("hidden");
+    document.getElementById("practice-reveal-btn").classList.remove("hidden");
+  }
+}
+
+function revealPracticeAnswer(correct) {
+  const w = practiceWords[practiceIndex];
+  practiceRevealed = true;
+
+  document.getElementById("practice-prompt").textContent = practiceDirection === "kr-to-meaning" ? w.meaning : w.korean;
+
+  const exampleEl = document.getElementById("practice-example");
+  if (w.example_kr) {
+    exampleEl.innerHTML = `<div class="kr">${w.example_kr}</div>` + (w.example_fr ? `<div>${w.example_fr}</div>` : "");
+    exampleEl.classList.remove("hidden");
+  }
+
+  if (correct !== null) {
+    const feedbackEl = document.getElementById("practice-feedback");
+    feedbackEl.textContent = correct ? t("practice.correct") : t("practice.incorrect");
+    feedbackEl.className = `practice-feedback ${correct ? "correct" : "incorrect"}`;
+  }
+
+  document.getElementById("practice-input").classList.add("hidden");
+  document.getElementById("practice-check-btn").classList.add("hidden");
+  document.getElementById("practice-reveal-btn").classList.add("hidden");
+  document.getElementById("practice-status-actions").classList.remove("hidden");
+}
+
+function submitPracticeAnswer() {
+  if (practiceRevealed) return;
+  const w = practiceWords[practiceIndex];
+  const correct = checkPracticeAnswer(document.getElementById("practice-input").value, w);
+  if (correct) practiceCorrectCount += 1;
+  revealPracticeAnswer(correct);
+}
+document.getElementById("practice-check-btn").addEventListener("click", submitPracticeAnswer);
+document.getElementById("practice-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") submitPracticeAnswer();
+});
+document.getElementById("practice-reveal-btn").addEventListener("click", () => revealPracticeAnswer(null));
+
+async function advancePractice(newStatus) {
+  const w = practiceWords[practiceIndex];
+  if (newStatus) {
+    await window.umbra.setVocabStatus(w.id, newStatus);
+    w.status = newStatus;
+  }
+  practiceIndex += 1;
+  if (practiceIndex >= practiceWords.length) {
+    finishPractice();
+    return;
+  }
+  renderPracticeCard();
+}
+document.getElementById("practice-btn-mastered").addEventListener("click", () => advancePractice("mastered"));
+document.getElementById("practice-btn-review").addEventListener("click", () => advancePractice("review"));
+document.getElementById("practice-btn-next").addEventListener("click", () => advancePractice(null));
+
+function finishPractice() {
+  document.querySelector(".practice-card").classList.add("hidden");
+  document.getElementById("practice-check-btn").classList.add("hidden");
+  document.getElementById("practice-reveal-btn").classList.add("hidden");
+  document.getElementById("practice-status-actions").classList.add("hidden");
+  document.getElementById("practice-done-text").textContent = t("practice.done", {
+    correct: practiceCorrectCount,
+    total: practiceWords.length,
+  });
+  document.getElementById("practice-done").classList.remove("hidden");
+  loadVocab();
+}
+
+function exitPractice() {
+  practiceSessionOverlay.classList.add("hidden");
+  loadVocab();
+}
+document.getElementById("btn-practice-exit").addEventListener("click", exitPractice);
+document.getElementById("btn-practice-done-close").addEventListener("click", exitPractice);
+
 // ---------- Réglages ----------
 // Thème/langue/particules/flou s'appliquent ET se sauvegardent tout de
 // suite au clic - l'utilisateur ne doit pas avoir à deviner qu'il faut

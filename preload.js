@@ -42,6 +42,7 @@ contextBridge.exposeInMainWorld("umbra", {
 
   getVocab: () => ipcRenderer.invoke("vocab:list"),
   getVocabStats: () => ipcRenderer.invoke("vocab:stats"),
+  pickPracticeWords: (options) => ipcRenderer.invoke("vocab:pickPractice", options),
   setVocabStatus: (id, status) => ipcRenderer.invoke("vocab:setStatus", { id, status }),
   importVocab: () => ipcRenderer.invoke("vocab:import"),
 

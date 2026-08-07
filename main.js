@@ -417,6 +417,7 @@ function runGuiMode() {
 
     ipcMain.handle("vocab:list", () => vocab.loadAll());
     ipcMain.handle("vocab:stats", () => vocab.getStats());
+    ipcMain.handle("vocab:pickPractice", (e, options) => vocab.pickPracticeWords(options));
     ipcMain.handle("vocab:setStatus", (e, { id, status }) => {
       vocab.setStatus(id, status);
       return { ok: true };
