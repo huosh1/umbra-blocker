@@ -438,6 +438,20 @@ function runGuiMode() {
       }
     });
 
+    // Synthèse vocale coréenne locale (Piper, hors-ligne) - le renderer
+    // retombe sur la voix Windows (Web Speech API) si ça échoue pour
+    // n'importe quelle raison (binaire absent, erreur de synthèse...).
+    ipcMain.handle("tts:speakKorean", async (e, text) => {
+      const piperTts = require("./src/lib/piperTts");
+      if (!piperTts.isAvailable()) return null;
+      try {
+        const buf = await piperTts.speak(text);
+        return buf.toString("base64");
+      } catch {
+        return null;
+      }
+    });
+
     ipcMain.handle("watchdog:status", () => ({ alive: isWatchdogAlive() }));
     ipcMain.handle("watchdog:ensure", () => {
       ensureWatchdog();

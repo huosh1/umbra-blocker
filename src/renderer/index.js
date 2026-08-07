@@ -794,6 +794,65 @@ setInterval(() => {
   if (!document.getElementById("panel-periode").classList.contains("hidden")) refreshActivePeriodsBanner();
 }, 5000);
 
+// ---------- Synthèse vocale coréenne ----------
+// API navigateur native (Chromium embarqué dans Electron), aucune dépendance
+// ni service externe - s'appuie sur les voix TTS déjà installées dans Windows.
+let koreanVoice = null;
+function loadKoreanVoice() {
+  if (!window.speechSynthesis) return;
+  const voices = window.speechSynthesis.getVoices().filter((v) => v.lang === "ko-KR" || v.lang.startsWith("ko"));
+  // Si une voix "Natural"/"Online" (le moteur neuronal, bien plus fluide que
+  // les anciennes voix SAPI5 de bureau type Heami) est installée, on la
+  // préfère automatiquement - sinon on retombe sur n'importe quelle voix
+  // coréenne disponible.
+  koreanVoice = voices.find((v) => /natural|online/i.test(v.name)) || voices[0] || null;
+}
+if (window.speechSynthesis) {
+  loadKoreanVoice();
+  window.speechSynthesis.onvoiceschanged = loadKoreanVoice;
+}
+function speakKoreanFallback(text) {
+  if (!window.speechSynthesis || !text) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = "ko-KR";
+  if (koreanVoice) utter.voice = koreanVoice;
+  utter.rate = 0.9;
+  window.speechSynthesis.speak(utter);
+}
+// Voix neuronale locale (Piper, hors-ligne, gratuite) nettement plus
+// naturelle que la voix Windows de bureau (Heami) - on l'utilise en
+// priorité et on ne retombe sur speechSynthesis que si Piper échoue pour
+// n'importe quelle raison (build sans le binaire, erreur de synthèse...).
+let lastPiperAudio = null;
+async function speakKorean(text) {
+  if (!text) return;
+  try {
+    const base64 = await window.umbra.speakKoreanPiper(text);
+    if (base64) {
+      if (lastPiperAudio) lastPiperAudio.pause();
+      lastPiperAudio = new Audio(`data:audio/wav;base64,${base64}`);
+      await lastPiperAudio.play();
+      return;
+    }
+  } catch {
+    // silencieux - on retombe sur la voix Windows ci-dessous
+  }
+  speakKoreanFallback(text);
+}
+function makeSpeakButton(text) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "speak-btn";
+  btn.title = t("vocab.listen");
+  btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>';
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    speakKorean(text);
+  });
+  return btn;
+}
+
 // ---------- Vocabulaire ----------
 let allVocab = [];
 let vocabFilter = "all";
@@ -842,19 +901,27 @@ function renderVocabList() {
 
     const main = document.createElement("div");
     main.className = "vocab-word-main";
+    const krRow = document.createElement("div");
+    krRow.className = "vocab-word-kr-row";
     const kr = document.createElement("div");
     kr.className = "vocab-word-kr";
     kr.textContent = w.korean;
+    krRow.appendChild(kr);
+    krRow.appendChild(makeSpeakButton(w.korean));
     const meaning = document.createElement("div");
     meaning.className = "vocab-word-meaning";
     meaning.textContent = w.meaning;
-    main.appendChild(kr);
+    main.appendChild(krRow);
     main.appendChild(meaning);
     if (w.example_kr) {
+      const exRow = document.createElement("div");
+      exRow.className = "vocab-word-example-row";
       const ex = document.createElement("div");
       ex.className = "vocab-word-example";
       ex.textContent = `${w.example_kr}${w.example_fr ? " — " + w.example_fr : ""}`;
-      main.appendChild(ex);
+      exRow.appendChild(ex);
+      exRow.appendChild(makeSpeakButton(w.example_kr));
+      main.appendChild(exRow);
     }
 
     const badges = document.createElement("div");
@@ -996,12 +1063,22 @@ document.getElementById("btn-practice-start").addEventListener("click", async ()
   renderPracticeCard();
 });
 
+function setPromptSpeakButton(text) {
+  const container = document.getElementById("practice-prompt-speak");
+  container.innerHTML = "";
+  if (text) container.appendChild(makeSpeakButton(text));
+}
+
 function renderPracticeCard() {
   const w = practiceWords[practiceIndex];
   practiceRevealed = false;
 
   document.getElementById("practice-progress").textContent = `${practiceIndex + 1} / ${practiceWords.length}`;
   document.getElementById("practice-prompt").textContent = practiceDirection === "kr-to-meaning" ? w.korean : w.meaning;
+  // En mode sens->coréen, pas de bouton son avant la réponse : ça donnerait
+  // directement la prononciation, donc la réponse, avant que l'utilisateur
+  // n'ait rien tenté.
+  setPromptSpeakButton(practiceDirection === "kr-to-meaning" ? w.korean : null);
 
   const exampleEl = document.getElementById("practice-example");
   exampleEl.innerHTML = "";
@@ -1033,10 +1110,24 @@ function revealPracticeAnswer(correct) {
   practiceRevealed = true;
 
   document.getElementById("practice-prompt").textContent = practiceDirection === "kr-to-meaning" ? w.meaning : w.korean;
+  setPromptSpeakButton(w.korean);
 
   const exampleEl = document.getElementById("practice-example");
+  exampleEl.innerHTML = "";
   if (w.example_kr) {
-    exampleEl.innerHTML = `<div class="kr">${w.example_kr}</div>` + (w.example_fr ? `<div>${w.example_fr}</div>` : "");
+    const krRow = document.createElement("div");
+    krRow.className = "card-example-kr-row";
+    const krDiv = document.createElement("div");
+    krDiv.className = "kr";
+    krDiv.textContent = w.example_kr;
+    krRow.appendChild(krDiv);
+    krRow.appendChild(makeSpeakButton(w.example_kr));
+    exampleEl.appendChild(krRow);
+    if (w.example_fr) {
+      const frDiv = document.createElement("div");
+      frDiv.textContent = w.example_fr;
+      exampleEl.appendChild(frDiv);
+    }
     exampleEl.classList.remove("hidden");
   }
 

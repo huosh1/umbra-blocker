@@ -45,6 +45,7 @@ contextBridge.exposeInMainWorld("umbra", {
   pickPracticeWords: (options) => ipcRenderer.invoke("vocab:pickPractice", options),
   setVocabStatus: (id, status) => ipcRenderer.invoke("vocab:setStatus", { id, status }),
   importVocab: () => ipcRenderer.invoke("vocab:import"),
+  speakKoreanPiper: (text) => ipcRenderer.invoke("tts:speakKorean", text),
 
   getStartupStatus: () => ipcRenderer.invoke("startup:status"),
   toggleStartup: () => ipcRenderer.invoke("startup:toggle"),

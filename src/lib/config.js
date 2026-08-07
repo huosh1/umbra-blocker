@@ -66,6 +66,10 @@ const EXTENSION_DIR = app.isPackaged
   ? path.join(process.resourcesPath, "extension")
   : path.join(__dirname, "..", "..", "extension");
 
+const PIPER_DIR = app.isPackaged
+  ? path.join(process.resourcesPath, "piper")
+  : path.join(__dirname, "..", "..", "resources", "piper");
+
 const HOSTS_PATH = "C:\\Windows\\System32\\drivers\\etc\\hosts";
 const MARK_START = "# --- UMBRA BLOCK START ---";
 const MARK_END = "# --- UMBRA BLOCK END ---";
@@ -102,6 +106,7 @@ module.exports = {
   LOG_FILE,
   WATCHDOG_PID_FILE,
   EXTENSION_DIR,
+  PIPER_DIR,
   BACKGROUND_DIR,
   HOSTS_PATH,
   HOSTS_BACKUP,

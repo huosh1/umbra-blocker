@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' file: data:; media-src 'self' file:;" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' file: data:; media-src 'self' file: data:;" />
 <title>Umbra — Focus Blocker</title>
 <link rel="stylesheet" href="style.css" />
 </head>
@@ -532,7 +532,10 @@
     <button id="btn-practice-exit" class="practice-exit-btn">&times;</button>
     <div class="practice-card">
       <div id="practice-progress" class="progress"></div>
-      <div id="practice-prompt" class="card-text"></div>
+      <div id="practice-prompt-row" class="practice-prompt-row">
+        <div id="practice-prompt" class="card-text"></div>
+        <span id="practice-prompt-speak"></span>
+      </div>
       <input id="practice-input" class="field-input practice-input hidden" type="text" autocomplete="off" />
       <div id="practice-feedback" class="practice-feedback hidden"></div>
       <div id="practice-example" class="card-example hidden"></div>

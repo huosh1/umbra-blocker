@@ -46,6 +46,10 @@
       {
         "from": "extension",
         "to": "extension"
+      },
+      {
+        "from": "resources/piper",
+        "to": "piper"
       }
     ],
     "win": {

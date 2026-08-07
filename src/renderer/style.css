@@ -352,10 +352,18 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round
   border-radius: 10px; padding: 10px 14px;
 }
 .vocab-word-main { flex: 1; min-width: 0; }
+.vocab-word-kr-row, .vocab-word-example-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .vocab-word-kr { font-size: 14px; font-weight: 700; }
 .vocab-word-meaning { font-size: 12px; color: var(--text-dim); }
-.vocab-word-example { font-size: 11px; color: var(--text-dim); margin-top: 2px; opacity: .8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vocab-word-example { font-size: 11px; color: var(--text-dim); margin-top: 2px; opacity: .8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .vocab-status-badges { display: flex; gap: 4px; flex-shrink: 0; }
+.speak-btn {
+  border: none; background: transparent; color: var(--text-dim); border-radius: 6px;
+  width: 22px; height: 22px; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background .12s, color .12s;
+}
+.speak-btn svg { width: 13px; height: 13px; }
+.speak-btn:hover { background: var(--overlay); color: var(--accent); }
 .vocab-status-badge {
   border: 1px solid var(--border); background: transparent; color: var(--text-dim); border-radius: 8px;
   padding: 6px 10px; font-size: 10.5px; cursor: pointer; font-family: inherit; font-weight: 600;
@@ -531,6 +539,9 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round
   padding: 32px; box-shadow: 0 30px 80px rgba(0,0,0,0.35);
 }
 .progress { font-size: 12px; color: var(--text-dim); margin-bottom: 14px; }
+.practice-prompt-row { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.practice-prompt-row .speak-btn { width: 28px; height: 28px; }
+.practice-prompt-row .speak-btn svg { width: 16px; height: 16px; }
 .card-text { font-size: 30px; font-weight: 700; text-align: center; line-height: 1.35; max-width: 480px; }
 .card-example {
   margin-top: 16px; font-size: 14px; color: var(--text-dim); text-align: center;
@@ -538,6 +549,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round
 }
 .card-example.hidden { display: none; }
 .card-example .kr { color: var(--text); }
+.card-example-kr-row { display: flex; align-items: center; justify-content: center; gap: 6px; }
 
 .practice-input {
   width: 320px; text-align: center; font-size: 18px; margin-top: 18px; margin-bottom: 0;
