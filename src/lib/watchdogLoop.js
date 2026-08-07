@@ -136,7 +136,17 @@ function createEnforcer() {
       } catch (err) {
         log(`ERROR app block failed: ${err.message}`);
       }
-    } else if (blocksActive) {
+    } else {
+      // Toujours tenté, même si blocksActive est déjà false : ce flag ne
+      // vit qu'en mémoire pour CE process. Si un watchdog précédent est
+      // mort/a été tué pendant qu'un blocage était actif (hosts pas
+      // nettoyé), le nouveau watchdog démarre avec blocksActive=false et ne
+      // saurait jamais qu'il doit nettoyer un blocage orphelin s'il ne
+      // tentait le retrait que sur cette condition - or removeSiteBlock()/
+      // removeDohBlock() sont sans effet s'il n'y a déjà rien à retirer,
+      // donc appeler à chaque tick où rien ne doit bloquer est sans coût et
+      // garantit qu'un blocage orphelin (ex: après "j'ai tout fermé") se
+      // résorbe de lui-même en un tick au lieu de rester bloqué à vie.
       try {
         blocker.removeSiteBlock();
       } catch (err) {

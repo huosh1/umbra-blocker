@@ -44,8 +44,14 @@ function applySiteBlock(sites) {
   fs.writeFileSync(HOSTS_PATH, newContent, "utf-8");
 }
 
+// Le watchdog appelle ça à chaque tick où rien ne doit bloquer (pas
+// seulement quand il pense avoir lui-même posé un blocage - voir
+// watchdogLoop.js), donc no-op explicite ici s'il n'y a déjà rien à retirer
+// pour éviter une écriture disque inutile toutes les 2s en continu.
 function removeSiteBlock() {
-  const content = stripBlock(readHosts());
+  const original = readHosts();
+  const content = stripBlock(original);
+  if (content === original) return;
   fs.writeFileSync(HOSTS_PATH, content, "utf-8");
 }
 
