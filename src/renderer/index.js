@@ -906,7 +906,7 @@ document.getElementById("btn-cleanup").addEventListener("click", async () => {
 // ("Register plugins can only be done before calling tsParticles.load()").
 // On enregistre donc les 4 presets une bonne fois pour toutes avant le
 // moindre load().
-const TS_PRESET_BY_MODE = { "ts-snow": "snow", "ts-stars": "stars", "ts-links": "links", "ts-fireworks": "fireworks" };
+const TS_PRESET_BY_MODE = { "ts-snow": "snow", "ts-links": "links", "ts-fireworks": "fireworks" };
 // Chaque preset a par défaut un fond opaque (sombre) et des particules
 // assez marquées, pensés pour être LE fond de la page - ça cachait
 // entièrement l'image/vidéo de fond déjà choisie par l'utilisateur. Fond
@@ -919,14 +919,6 @@ const TS_OVERRIDES = {
       number: { value: 50 },
       opacity: { value: { min: 0.1, max: 0.35 } },
       size: { value: { min: 1, max: 3 } },
-    },
-  },
-  stars: {
-    background: { color: { value: "transparent" } },
-    particles: {
-      number: { value: 60 },
-      opacity: { value: { min: 0.1, max: 0.5 } },
-      size: { value: { min: 0.5, max: 1.6 } },
     },
   },
   links: {
@@ -945,19 +937,20 @@ const focusTsParticles = document.getElementById("focus-tsparticles");
 let tsContainer = null;
 const tsReady = (async () => {
   await window.loadSnowPreset(window.tsParticles);
-  await window.loadStarsPreset(window.tsParticles);
   await window.loadLinksPreset(window.tsParticles);
   await window.loadFireworksPreset(window.tsParticles);
 })();
 
 // tsParticles crée parfois le canvas à la taille par défaut du navigateur
 // (300x150) au lieu de la taille réelle de #focus-tsparticles - observé de
-// façon non déterministe (pas seulement au tout premier chargement), sans
-// rapport clair avec la visibilité/le layout du conteneur au moment du
-// load(). Un simple dispatch de "resize" aide parfois mais pas de façon
-// fiable à coup sûr. On boucle donc dessus (borné) jusqu'à ce que la taille
-// du canvas corresponde réellement au conteneur, avec un correctif direct
-// en dernier recours.
+// façon non déterministe, sans rapport clair avec la visibilité/le layout
+// du conteneur au moment du load(). Un simple dispatch de "resize" aide
+// parfois mais pas de façon fiable à coup sûr. On boucle donc dessus
+// (borné) jusqu'à ce que la taille du canvas corresponde réellement au
+// conteneur. Pas de correctif "forcé" (canvas.width/height en direct) en
+// dernier recours : ça désynchronise l'état interne de tsParticles de la
+// taille réelle du canvas, et ça provoquait un flash noir/blanc quelques
+// secondes plus tard quand tsParticles recalculait sa taille de son côté.
 async function ensureTsCanvasSized(containerEl) {
   for (let attempt = 0; attempt < 20; attempt++) {
     const canvas = containerEl.querySelector("canvas");
@@ -969,12 +962,6 @@ async function ensureTsCanvasSized(containerEl) {
     window.dispatchEvent(new Event("resize"));
     await new Promise((r) => requestAnimationFrame(r));
   }
-  const canvas = containerEl.querySelector("canvas");
-  if (canvas) {
-    const rect = containerEl.getBoundingClientRect();
-    canvas.width = Math.round(rect.width * devicePixelRatio);
-    canvas.height = Math.round(rect.height * devicePixelRatio);
-  }
 }
 
 async function setParticleMode(mode) {
@@ -982,6 +969,10 @@ async function setParticleMode(mode) {
     tsContainer.destroy();
     tsContainer = null;
   }
+  // Filet de sécurité : destroy() est censé retirer son canvas, mais si un
+  // reliquat traîne (comportement déjà vu comme peu fiable avec cette
+  // lib), "Aucun" doit rester une garantie visuelle, pas juste un espoir.
+  focusTsParticles.innerHTML = "";
   const preset = TS_PRESET_BY_MODE[mode];
   if (preset) {
     focusTsParticles.classList.remove("hidden");

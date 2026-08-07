@@ -7,7 +7,7 @@ function defaultSettings() {
     theme: "umbra", // "umbra" | "lavender" | "midnight" | "sakura"
     durationPresets: [25, 60, 180], // minutes
     background: { path: null, type: null, blur: true }, // type: null | "image" | "video"
-    particles: "none", // "none" | "ts-snow" | "ts-stars" | "ts-links" | "ts-fireworks"
+    particles: "none", // "none" | "ts-snow" | "ts-links" | "ts-fireworks"
   };
 }
 
