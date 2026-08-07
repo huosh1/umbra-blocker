@@ -258,9 +258,51 @@ function runGuiMode() {
     const trayIcon = nativeImage.createFromPath(ICON_PATH);
     tray = new Tray(trayIcon.isEmpty() ? trayIcon : trayIcon.resize({ width: 16, height: 16 }));
     tray.setToolTip("Umbra — Focus Blocker");
-    tray.setContextMenu(
-      Menu.buildFromTemplate([
+    tray.on("click", () => { mainWindow.show(); mainWindow.focus(); });
+
+    // Démarrer/arrêter une session sans passer par le tableau de bord -
+    // mêmes fonctions que les handlers IPC session:start/startPomodoro/stop
+    // (même comportement : élève le watchdog, respecte le hard mode).
+    function startQuickSession(minutes) {
+      session.startCustom(minutes, false, "Session de focus");
+      ensureWatchdog();
+      updateTrayStatus();
+    }
+    function startQuickPomodoro() {
+      session.startPomodoro({ workMinutes: 25, breakMinutes: 5, cyclesTotal: 4, hardMode: false, questName: "Session de focus" });
+      ensureWatchdog();
+      updateTrayStatus();
+    }
+    async function stopQuickSession() {
+      const s = session.load();
+      if (!session.canStop(s)) return;
+      session.stop(s);
+      try {
+        blocker.removeSiteBlock();
+        await blocker.removeDohBlock();
+      } catch {
+        // le watchdog nettoiera au prochain tick si ça échoue ici
+      }
+      updateTrayStatus();
+    }
+
+    function buildTrayMenu() {
+      const s = session.load();
+      const currentSettings = settings.load();
+      const presets = currentSettings.durationPresets && currentSettings.durationPresets.length
+        ? currentSettings.durationPresets
+        : [25, 60, 180];
+      const startItems = presets.map((minutes) => ({
+        label: `${minutes} min`,
+        click: () => startQuickSession(minutes),
+      }));
+      startItems.push({ label: "Pomodoro (25/5 × 4)", click: startQuickPomodoro });
+
+      return Menu.buildFromTemplate([
         { label: "Ouvrir Umbra", click: () => { mainWindow.show(); mainWindow.focus(); } },
+        { type: "separator" },
+        { label: "Démarrer une session", submenu: startItems, enabled: !s.active },
+        { label: "Arrêter la session", click: stopQuickSession, enabled: s.active && session.canStop(s) },
         { type: "separator" },
         {
           label: "Quitter",
@@ -269,9 +311,14 @@ function runGuiMode() {
             app.quit();
           },
         },
-      ])
-    );
-    tray.on("click", () => { mainWindow.show(); mainWindow.focus(); });
+      ]);
+    }
+    // setContextMenu() couvre le cas général (rafraîchi à chaque tick de
+    // updateTrayStatus, donc au pire 5s de retard) ; le handler right-click
+    // reconstruit le menu à l'instant du clic pour avoir l'état le plus
+    // frais possible (session tout juste démarrée/arrêtée depuis le
+    // tableau de bord, par exemple).
+    tray.on("right-click", () => tray.popUpContextMenu(buildTrayMenu()));
 
     // Indicateur d'état visible en permanence (pas seulement dans l'onglet
     // Plage) : la plupart des bugs de blocage débattus cette session
@@ -301,6 +348,7 @@ function runGuiMode() {
         status === "warning" ? "Umbra — Devrait protéger, mais le watchdog ne répond pas" :
         "Umbra — Focus Blocker"
       );
+      tray.setContextMenu(buildTrayMenu());
     }
     updateTrayStatus();
     setInterval(updateTrayStatus, 5000);
