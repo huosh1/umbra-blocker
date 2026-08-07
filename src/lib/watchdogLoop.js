@@ -5,7 +5,6 @@ const session = require("./session");
 const periods = require("./periods");
 const blocker = require("./blocker");
 const settings = require("./settings");
-const sound = require("./sound");
 const { loadBlocklist } = require("./blocklist");
 const { LOG_FILE, WATCHDOG_PID_FILE } = require("./config");
 
@@ -40,25 +39,17 @@ const NOTIF_TEXT = {
   },
 };
 
-const SOUND_BY_KEY = { break: "phase-change", work: "phase-change", done: "session-complete" };
-
 // Le watchdog tourne indépendamment de la fenêtre GUI (souvent cachée ou
 // fermée) : c'est le seul processus garanti de voir passer ces transitions,
-// donc c'est lui qui doit déclencher les notifications système (et le son
-// qui va avec, indépendamment - un son doit pouvoir jouer même sur un
-// système où les toasts Windows ne sont pas disponibles).
+// donc c'est lui qui doit déclencher les notifications système.
 function notify(key) {
-  let userSettings;
-  try {
-    userSettings = settings.load();
-  } catch {
-    userSettings = settings.defaultSettings();
-  }
-
-  if (userSettings.soundEnabled !== false) sound.playSound(SOUND_BY_KEY[key]);
-
   if (!Notification.isSupported()) return;
-  const lang = userSettings.language === "en" ? "en" : "fr";
+  let lang = "fr";
+  try {
+    lang = settings.load().language === "en" ? "en" : "fr";
+  } catch {
+    // pas grave, on garde le français par défaut
+  }
   const text = NOTIF_TEXT[lang];
   try {
     new Notification({

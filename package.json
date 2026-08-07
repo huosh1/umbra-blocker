@@ -28,8 +28,7 @@
       "assets/**/*"
     ],
     "asarUnpack": [
-      "**/*.ps1",
-      "assets/sounds/**/*"
+      "**/*.ps1"
     ],
     "extraResources": [
       {

@@ -8,7 +8,6 @@ function defaultSettings() {
     durationPresets: [25, 60, 180], // minutes
     background: { path: null, type: null, blur: true }, // type: null | "image" | "video"
     particles: "none", // "none" | "ts-snow" | "ts-links" | "ts-fireworks"
-    soundEnabled: true,
   };
 }
 
