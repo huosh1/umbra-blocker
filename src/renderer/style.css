@@ -459,3 +459,11 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round
 .spotify-meta { text-align: left; }
 .spotify-title { font-size: 12.5px; font-weight: 600; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .spotify-artist { font-size: 11px; color: var(--text-dim); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spotify-controls { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.spotify-ctrl-btn {
+  width: 26px; height: 26px; border-radius: 999px; border: none; background: rgba(255,255,255,0.08);
+  color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.spotify-ctrl-btn:hover { background: rgba(255,255,255,0.18); }
+.spotify-ctrl-btn svg { fill: currentColor; }
+.spotify-ctrl-btn svg.hidden { display: none; }

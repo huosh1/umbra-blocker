@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld("umbra", {
   cleanupBeforeUninstall: () => ipcRenderer.invoke("app:cleanup"),
 
   getSpotifyNowPlaying: () => ipcRenderer.invoke("spotify:nowPlaying"),
+  spotifyControl: (action) => ipcRenderer.invoke("spotify:control", action),
 
   getExtensionPath: () => ipcRenderer.invoke("extension:getPath"),
   openExtensionFolder: () => ipcRenderer.invoke("extension:openFolder"),

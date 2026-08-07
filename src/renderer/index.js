@@ -997,6 +997,8 @@ const spotifyArtist = document.getElementById("spotify-artist");
 const spotifyPreview = document.getElementById("spotify-preview");
 const spotifyCoverImg = document.getElementById("spotify-cover-img");
 const spotifyCoverFallback = document.getElementById("spotify-cover-fallback");
+const spotifyIconPause = document.getElementById("spotify-icon-pause");
+const spotifyIconPlay = document.getElementById("spotify-icon-play");
 
 async function refreshSpotify() {
   const info = await window.umbra.getSpotifyNowPlaying();
@@ -1013,6 +1015,10 @@ async function refreshSpotify() {
       spotifyCoverImg.classList.add("hidden");
       spotifyCoverFallback.classList.remove("hidden");
     }
+    // Icône "pause" affichée pendant la lecture (cliquer met en pause), et
+    // inversement - convention standard des lecteurs media.
+    spotifyIconPause.classList.toggle("hidden", !info.playing);
+    spotifyIconPlay.classList.toggle("hidden", !!info.playing);
   } else {
     spotifyWidget.classList.add("hidden");
     spotifyPreview.textContent = "—";
@@ -1020,6 +1026,19 @@ async function refreshSpotify() {
 }
 setInterval(refreshSpotify, 4000);
 refreshSpotify();
+
+document.getElementById("spotify-btn-prev").addEventListener("click", async () => {
+  await window.umbra.spotifyControl("previous");
+  setTimeout(refreshSpotify, 300);
+});
+document.getElementById("spotify-btn-toggle").addEventListener("click", async () => {
+  await window.umbra.spotifyControl("toggle");
+  setTimeout(refreshSpotify, 300);
+});
+document.getElementById("spotify-btn-next").addEventListener("click", async () => {
+  await window.umbra.spotifyControl("next");
+  setTimeout(refreshSpotify, 300);
+});
 
 // ---------- Init ----------
 (async function init() {

@@ -422,6 +422,10 @@ function runGuiMode() {
     });
 
     ipcMain.handle("spotify:nowPlaying", () => require("./src/lib/spotify").getNowPlaying());
+    ipcMain.handle("spotify:control", (e, action) => {
+      if (!["previous", "toggle", "next"].includes(action)) return { ok: false };
+      return require("./src/lib/spotify").controlPlayback(action);
+    });
 
     ipcMain.handle("extension:getPath", () => EXTENSION_DIR);
     ipcMain.handle("extension:openFolder", () => {

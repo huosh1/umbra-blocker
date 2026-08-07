@@ -8,6 +8,7 @@ const execFileAsync = promisify(execFile);
 // via la config "asarUnpack" d'electron-builder, d'où la substitution de
 // chemin ci-dessous (no-op en dev, où __dirname ne contient pas "app.asar").
 const SCRIPT_PATH = path.join(__dirname, "spotify_nowplaying.ps1").replace("app.asar", "app.asar.unpacked");
+const CONTROL_SCRIPT_PATH = path.join(__dirname, "spotify_control.ps1").replace("app.asar", "app.asar.unpacked");
 const PS_EXE = path.join(
   process.env.SystemRoot || "C:\\Windows",
   "System32", "WindowsPowerShell", "v1.0", "powershell.exe"
@@ -43,4 +44,20 @@ async function getNowPlaying() {
   }
 }
 
-module.exports = { getNowPlaying };
+// Envoie une commande de lecture (previous/toggle/next) à la session
+// Spotify active - même mécanisme SMTC que getNowPlaying(), donc rien à
+// configurer côté Spotify.
+async function controlPlayback(action) {
+  try {
+    const { stdout } = await execFileAsync(
+      PS_EXE,
+      ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", CONTROL_SCRIPT_PATH, "-Action", action],
+      { timeout: 5000, maxBuffer: 1024 * 1024 }
+    );
+    return JSON.parse(stdout.trim());
+  } catch {
+    return { ok: false };
+  }
+}
+
+module.exports = { getNowPlaying, controlPlayback };
