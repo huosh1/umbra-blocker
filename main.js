@@ -638,5 +638,10 @@ function runGuiMode() {
 
   app.on("before-quit", () => {
     app.isQuiting = true;
+    try {
+      require("./src/lib/piperTts").shutdown();
+    } catch {
+      // pas grave, le process piper (s'il tournait) mourra avec le parent
+    }
   });
 }
