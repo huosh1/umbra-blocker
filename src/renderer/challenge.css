@@ -28,11 +28,21 @@ html, body {
 
 .progress { font-size: 12px; color: var(--text-dim); margin-bottom: 14px; }
 
+.prompt-row { display: flex; align-items: center; justify-content: center; gap: 8px; }
+
 .card-text {
   font-size: 32px; font-weight: 700; text-align: center; line-height: 1.35;
   max-width: 480px; animation: fadein .18s ease;
 }
 @keyframes fadein { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: none; } }
+
+.speak-btn {
+  border: none; background: transparent; color: var(--text-dim); border-radius: 8px;
+  width: 30px; height: 30px; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background .12s, color .12s;
+}
+.speak-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.speak-btn:hover { background: rgba(255,255,255,0.08); color: var(--accent); }
 
 .action-btn {
   width: 300px; height: 52px; border: none; border-radius: 14px; background: var(--accent);
@@ -51,6 +61,7 @@ html, body {
 }
 .card-example.hidden { display: none; }
 .card-example .kr { color: var(--text); }
+.example-kr-row { display: flex; align-items: center; justify-content: center; gap: 6px; }
 
 .status-actions { display: flex; gap: 10px; }
 .status-actions.hidden { display: none; }

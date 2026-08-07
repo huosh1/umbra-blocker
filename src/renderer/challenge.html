@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; media-src 'self' data:;" />
 <title>Umbra — Défi du matin</title>
 <link rel="stylesheet" href="challenge.css" />
 </head>
@@ -11,7 +11,10 @@
     <div class="eyebrow">DÉFI DU MATIN</div>
     <div class="card">
       <div id="progress" class="progress"></div>
-      <div id="card-text" class="card-text"></div>
+      <div class="prompt-row">
+        <div id="card-text" class="card-text"></div>
+        <span id="prompt-speak"></span>
+      </div>
       <div id="card-example" class="card-example hidden"></div>
     </div>
     <button id="action-btn" class="action-btn">Voir la réponse</button>
