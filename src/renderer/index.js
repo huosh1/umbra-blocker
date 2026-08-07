@@ -138,26 +138,19 @@ async function refreshSession() {
     focusView.classList.add("hidden");
     backToFocusBtn.classList.add("hidden");
   }
-  if (lastSessionActive && !s.active) refreshHistoryStats();
+  if (lastSessionActive && !s.active) refreshStatsTab();
   lastSessionActive = s.active;
 }
 
-const statToday = document.getElementById("stat-today");
-const statStreak = document.getElementById("stat-streak");
-const statWeek = document.getElementById("stat-week");
 function formatStatMinutes(min) {
   if (min >= 60) return `${Math.floor(min / 60)}h${String(min % 60).padStart(2, "0")}`;
   return `${min}min`;
 }
-async function refreshHistoryStats() {
-  const stats = await window.umbra.getHistoryStats();
-  statToday.textContent = formatStatMinutes(stats.todayMinutes);
-  statStreak.textContent = String(stats.streakDays);
-  statWeek.textContent = formatStatMinutes(stats.weekMinutes);
-}
 
 // ---------- Stats (onglet dédié) ----------
 let statsQuestRange = "7"; // "7" ou "all" - lu sur le bouton actif
+
+const STATS_DEFAULT_QUEST = "Session de focus"; // doit rester identique au fallback de main.js/history.js
 
 async function renderQuestBreakdown() {
   const rangeDays = statsQuestRange === "all" ? null : Number(statsQuestRange);
@@ -172,11 +165,77 @@ async function renderQuestBreakdown() {
   for (const { questName, minutes } of breakdown) {
     const row = document.createElement("div");
     row.className = "quest-row";
-    row.innerHTML = `
-      <span class="quest-row-name" title="${questName}">${questName}</span>
-      <span class="quest-row-bar-wrap"><span class="quest-row-bar" style="width:${Math.max(3, (minutes / max) * 100)}%"></span></span>
-      <span class="quest-row-minutes">${formatStatMinutes(minutes)}</span>
-    `;
+
+    const nameEl = document.createElement("span");
+    nameEl.className = "quest-row-name";
+    nameEl.title = questName;
+    nameEl.textContent = questName;
+
+    const barWrap = document.createElement("span");
+    barWrap.className = "quest-row-bar-wrap";
+    const bar = document.createElement("span");
+    bar.className = "quest-row-bar";
+    bar.style.width = `${Math.max(3, (minutes / max) * 100)}%`;
+    barWrap.appendChild(bar);
+
+    const minutesEl = document.createElement("span");
+    minutesEl.className = "quest-row-minutes";
+    minutesEl.textContent = formatStatMinutes(minutes);
+
+    // Édition en ligne : clic sur ✎ remplace le libellé par un champ texte,
+    // Entrée/perte de focus valide, Échap annule.
+    const renameBtn = document.createElement("button");
+    renameBtn.type = "button";
+    renameBtn.className = "quest-row-action";
+    renameBtn.title = t("stats.rename");
+    renameBtn.textContent = "✎";
+    renameBtn.addEventListener("click", () => {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "field-input quest-row-name-input";
+      input.value = questName;
+      nameEl.replaceWith(input);
+      input.focus();
+      input.select();
+      let settled = false;
+      const commit = async () => {
+        if (settled) return;
+        settled = true;
+        const newName = input.value.trim();
+        if (newName && newName !== questName) {
+          await window.umbra.renameQuest(questName, newName);
+          showToast(t("stats.renamed"));
+        }
+        renderQuestBreakdown();
+      };
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") input.blur();
+        if (e.key === "Escape") { settled = true; renderQuestBreakdown(); }
+      });
+      input.addEventListener("blur", commit);
+    });
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "quest-row-action";
+    removeBtn.title = t("stats.removeTag");
+    removeBtn.textContent = "×";
+    if (questName === STATS_DEFAULT_QUEST) {
+      removeBtn.disabled = true;
+      removeBtn.classList.add("quest-row-action-disabled");
+    } else {
+      removeBtn.addEventListener("click", async () => {
+        await window.umbra.removeQuest(questName);
+        showToast(t("stats.removed"));
+        renderQuestBreakdown();
+      });
+    }
+
+    row.appendChild(nameEl);
+    row.appendChild(barWrap);
+    row.appendChild(minutesEl);
+    row.appendChild(renameBtn);
+    row.appendChild(removeBtn);
     el.appendChild(row);
   }
 }
@@ -199,13 +258,63 @@ async function renderDailyChart() {
   }
 }
 
+function renderSimpleBreakdown(elId, rows, max) {
+  const el = document.getElementById(elId);
+  el.innerHTML = "";
+  if (!rows.some((r) => r.minutes > 0)) {
+    el.innerHTML = `<div class="stats-empty">${t("stats.empty")}</div>`;
+    return;
+  }
+  for (const { label, minutes } of rows) {
+    const row = document.createElement("div");
+    row.className = "quest-row";
+    const nameEl = document.createElement("span");
+    nameEl.className = "quest-row-name";
+    nameEl.textContent = label;
+    const barWrap = document.createElement("span");
+    barWrap.className = "quest-row-bar-wrap";
+    const bar = document.createElement("span");
+    bar.className = "quest-row-bar";
+    bar.style.width = `${Math.max(3, (minutes / max) * 100)}%`;
+    barWrap.appendChild(bar);
+    const minutesEl = document.createElement("span");
+    minutesEl.className = "quest-row-minutes";
+    minutesEl.textContent = formatStatMinutes(minutes);
+    row.appendChild(nameEl);
+    row.appendChild(barWrap);
+    row.appendChild(minutesEl);
+    el.appendChild(row);
+  }
+}
+
+async function renderTimeOfDayBreakdown() {
+  const breakdown = await window.umbra.getTimeOfDayBreakdown(30);
+  const labels = { morning: t("stats.morning"), afternoon: t("stats.afternoon"), evening: t("stats.evening"), night: t("stats.night") };
+  const rows = breakdown.map((b) => ({ label: labels[b.key], minutes: b.minutes }));
+  const max = Math.max(1, ...rows.map((r) => r.minutes));
+  renderSimpleBreakdown("timeofday-breakdown", rows, max);
+}
+
+async function renderWeekdayBreakdown() {
+  const breakdown = await window.umbra.getWeekdayBreakdown(30);
+  const dayLabels = currentLang === "en"
+    ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    : ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+  // breakdown est déjà renvoyé lundi -> dimanche par getWeekdayBreakdown()
+  const rows = breakdown.map((b, i) => ({ label: dayLabels[i], minutes: b.minutes }));
+  const max = Math.max(1, ...rows.map((r) => r.minutes));
+  renderSimpleBreakdown("weekday-breakdown", rows, max);
+}
+
 async function refreshStatsTab() {
   const stats = await window.umbra.getHistoryStats();
   document.getElementById("stats-tile-today").textContent = formatStatMinutes(stats.todayMinutes);
   document.getElementById("stats-tile-streak").textContent = String(stats.streakDays);
   document.getElementById("stats-tile-week").textContent = formatStatMinutes(stats.weekMinutes);
   document.getElementById("stats-tile-total").textContent = String(stats.totalSessions);
-  await Promise.all([renderQuestBreakdown(), renderDailyChart()]);
+  document.getElementById("stats-tile-month").textContent = formatStatMinutes(stats.monthMinutes);
+  document.getElementById("stats-tile-average").textContent = formatStatMinutes(stats.averageSessionMinutes);
+  await Promise.all([renderQuestBreakdown(), renderDailyChart(), renderTimeOfDayBreakdown(), renderWeekdayBreakdown()]);
 }
 
 document.querySelectorAll('[data-range]').forEach((btn) => {
@@ -246,7 +355,7 @@ async function doStop(feedbackEl) {
     feedbackEl.textContent = t("session.hardModeBlocked", { min: remaining });
   } else {
     feedbackEl.textContent = "";
-    refreshHistoryStats();
+    refreshStatsTab();
   }
   refreshSession();
 }
@@ -1172,5 +1281,5 @@ document.getElementById("spotify-btn-next").addEventListener("click", async () =
   renderStartupStatus(await window.umbra.getStartupStatus());
   await loadVocab();
   refreshSession();
-  refreshHistoryStats();
+  refreshStatsTab();
 })();

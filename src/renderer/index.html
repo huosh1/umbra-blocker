@@ -59,21 +59,6 @@
           <button class="mode-btn" data-mode="periode" data-i18n="session.modePeriode">Plage</button>
         </div>
 
-        <div id="history-stats-bar" class="history-stats-bar">
-          <div class="history-stat">
-            <span id="stat-today" class="history-stat-value">0min</span>
-            <span class="history-stat-label" data-i18n="session.statToday">Aujourd'hui</span>
-          </div>
-          <div class="history-stat">
-            <span id="stat-streak" class="history-stat-value">0</span>
-            <span class="history-stat-label" data-i18n="session.statStreak">Jours de série</span>
-          </div>
-          <div class="history-stat">
-            <span id="stat-week" class="history-stat-value">0min</span>
-            <span class="history-stat-label" data-i18n="session.statWeek">Cette semaine</span>
-          </div>
-        </div>
-
         <div class="session-grid">
           <div class="card timer-card">
             <div class="ring-wrap">
@@ -269,6 +254,14 @@
             <span id="stats-tile-total" class="history-stat-value">0</span>
             <span class="history-stat-label" data-i18n="stats.totalSessions">Sessions au total</span>
           </div>
+          <div class="history-stat">
+            <span id="stats-tile-month" class="history-stat-value">0min</span>
+            <span class="history-stat-label" data-i18n="stats.statMonth">Ce mois-ci</span>
+          </div>
+          <div class="history-stat">
+            <span id="stats-tile-average" class="history-stat-value">0min</span>
+            <span class="history-stat-label" data-i18n="stats.statAverage">Moyenne / session</span>
+          </div>
         </div>
 
         <div class="card settings-spacing">
@@ -285,6 +278,16 @@
         <div class="card settings-spacing">
           <div class="card-header"><h2 data-i18n="stats.daily">Activité des 14 derniers jours</h2></div>
           <div id="daily-breakdown" class="daily-chart"></div>
+        </div>
+
+        <div class="card settings-spacing">
+          <div class="card-header"><h2 data-i18n="stats.timeOfDay">Moment de la journée (30 derniers jours)</h2></div>
+          <div id="timeofday-breakdown" class="quest-breakdown"></div>
+        </div>
+
+        <div class="card settings-spacing">
+          <div class="card-header"><h2 data-i18n="stats.weekday">Jour de la semaine (30 derniers jours)</h2></div>
+          <div id="weekday-breakdown" class="quest-breakdown"></div>
         </div>
       </section>
 

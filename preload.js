@@ -35,6 +35,10 @@ contextBridge.exposeInMainWorld("umbra", {
   getHistoryStats: () => ipcRenderer.invoke("history:stats"),
   getQuestBreakdown: (rangeDays) => ipcRenderer.invoke("history:questBreakdown", rangeDays),
   getDailyBreakdown: (days) => ipcRenderer.invoke("history:dailyBreakdown", days),
+  renameQuest: (oldName, newName) => ipcRenderer.invoke("history:renameQuest", oldName, newName),
+  removeQuest: (name) => ipcRenderer.invoke("history:removeQuest", name),
+  getTimeOfDayBreakdown: (rangeDays) => ipcRenderer.invoke("history:timeOfDayBreakdown", rangeDays),
+  getWeekdayBreakdown: (rangeDays) => ipcRenderer.invoke("history:weekdayBreakdown", rangeDays),
 
   getVocab: () => ipcRenderer.invoke("vocab:list"),
   getVocabStats: () => ipcRenderer.invoke("vocab:stats"),

@@ -135,9 +135,9 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round
 .card-header h2 { font-size: 13px; margin: 0; letter-spacing: .04em; text-transform: uppercase; color: var(--text-dim); }
 
 /* ---------- Session tab ---------- */
-.history-stats-bar { display: flex; gap: 12px; margin-bottom: 18px; }
+.history-stats-bar { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
 .history-stat {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  flex: 1 1 130px; display: flex; flex-direction: column; align-items: center; gap: 4px;
   padding: 12px 8px; border-radius: var(--radius);
   background: var(--panel); border: 1px solid var(--border);
 }
@@ -151,6 +151,13 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round
 .quest-row-bar-wrap { flex: 1; background: var(--panel-2); border-radius: 6px; height: 10px; overflow: hidden; }
 .quest-row-bar { height: 100%; background: var(--accent); border-radius: 6px; }
 .quest-row-minutes { flex: 0 0 54px; text-align: right; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.quest-row-name-input { flex: 0 0 130px; font-size: 12.5px; padding: 4px 6px; margin-bottom: 0; }
+.quest-row-action {
+  flex: 0 0 auto; background: none; border: none; color: var(--text-dim); cursor: pointer;
+  font-size: 12px; width: 22px; height: 22px; border-radius: 6px; line-height: 1;
+}
+.quest-row-action:hover:not(:disabled) { background: var(--overlay); color: var(--text); }
+.quest-row-action-disabled { opacity: 0.3; cursor: default; }
 .stats-empty { color: var(--text-dim); font-size: 12.5px; padding: 8px 0; }
 
 .daily-chart { display: flex; align-items: flex-end; gap: 5px; height: 110px; }

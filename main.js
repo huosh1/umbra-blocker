@@ -404,6 +404,16 @@ function runGuiMode() {
     ipcMain.handle("history:stats", () => history.getStats());
     ipcMain.handle("history:questBreakdown", (e, rangeDays) => history.getQuestBreakdown(rangeDays));
     ipcMain.handle("history:dailyBreakdown", (e, days) => history.getDailyBreakdown(days));
+    ipcMain.handle("history:renameQuest", (e, oldName, newName) => {
+      history.renameQuest(oldName, newName);
+      return { ok: true };
+    });
+    ipcMain.handle("history:removeQuest", (e, name) => {
+      history.removeQuest(name);
+      return { ok: true };
+    });
+    ipcMain.handle("history:timeOfDayBreakdown", (e, rangeDays) => history.getTimeOfDayBreakdown(rangeDays));
+    ipcMain.handle("history:weekdayBreakdown", (e, rangeDays) => history.getWeekdayBreakdown(rangeDays));
 
     ipcMain.handle("vocab:list", () => vocab.loadAll());
     ipcMain.handle("vocab:stats", () => vocab.getStats());
