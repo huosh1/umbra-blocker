@@ -295,8 +295,10 @@
         <div class="card settings-spacing">
           <div class="card-header"><h2 data-i18n="settings.particles">Effet de particules</h2></div>
           <div class="lang-row">
-            <button class="particle-btn active" data-particles="stars" data-i18n="settings.particlesStars">Étoiles</button>
-            <button class="particle-btn" data-particles="wind" data-i18n="settings.particlesWind">Vent</button>
+            <button class="particle-btn active" data-particles="ts-snow" data-i18n="settings.particlesSnow">Neige</button>
+            <button class="particle-btn" data-particles="ts-stars" data-i18n="settings.particlesStarsTs">Étoiles+</button>
+            <button class="particle-btn" data-particles="ts-links" data-i18n="settings.particlesLinks">Liens</button>
+            <button class="particle-btn" data-particles="ts-fireworks" data-i18n="settings.particlesFireworks">Feu d'artifice</button>
             <button class="particle-btn" data-particles="none" data-i18n="settings.particlesNone">Aucun</button>
           </div>
         </div>
@@ -342,7 +344,7 @@
   <div id="focus-view" class="focus-view hidden">
     <div class="focus-bg" id="focus-bg"></div>
     <video id="focus-bg-video" class="focus-bg focus-bg-video hidden" muted loop autoplay playsinline></video>
-    <canvas id="focus-particles" class="focus-particles"></canvas>
+    <div id="focus-tsparticles" class="focus-particles hidden"></div>
     <button id="btn-focus-dashboard" class="focus-dashboard-btn" data-i18n="session.dashboard">Tableau de bord</button>
     <div class="focus-content">
       <div id="spotify-widget" class="spotify-widget hidden">
@@ -414,7 +416,10 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="i18n.js"></script>
-  <script src="particles.js"></script>
+  <script src="vendor/tsparticles/tsparticles.preset.snow.bundle.min.js"></script>
+  <script src="vendor/tsparticles/tsparticles.preset.fireworks.bundle.min.js"></script>
+  <script src="vendor/tsparticles/tsparticles.preset.links.bundle.min.js"></script>
+  <script src="vendor/tsparticles/tsparticles.preset.stars.bundle.min.js"></script>
   <script src="index.js"></script>
 </body>
 </html>

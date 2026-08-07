@@ -394,11 +394,12 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round
 .theme-swatch-lavender { background: linear-gradient(135deg, #ffffff 50%, #8b7cf6 50%); }
 .theme-swatch-sakura { background: linear-gradient(135deg, #ffffff 50%, #e8779a 50%); }
 
-.lang-row { display: flex; gap: 8px; }
+.lang-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .lang-btn, .particle-btn {
   border: 1px solid var(--border); background: var(--panel-2); color: var(--text); border-radius: 9px;
   padding: 9px 16px; font-size: 12.5px; cursor: pointer; font-family: inherit; flex: 1;
 }
+.particle-btn { flex: 0 1 auto; }
 .lang-btn.active, .particle-btn.active { background: color-mix(in srgb, var(--accent) 20%, transparent); border-color: var(--accent); color: var(--accent); }
 .background-preview {
   position: relative; width: 100%; height: 120px; border-radius: 10px; background: var(--panel-2) center/cover no-repeat;
@@ -424,6 +425,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round
   content: ""; position: absolute; inset: 0; background: rgba(6,7,12,0.45); pointer-events: none;
 }
 .focus-particles { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+.focus-particles.hidden { display: none; }
 .focus-dashboard-btn {
   position: absolute; top: 20px; right: 24px; z-index: 5; background: rgba(255,255,255,0.06);
   border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: 9px;

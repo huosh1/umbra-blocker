@@ -789,7 +789,7 @@ document.querySelectorAll(".particle-btn").forEach((btn) => {
     document.querySelectorAll(".particle-btn").forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
     currentSettings.particles = btn.dataset.particles;
-    particles.setMode(currentSettings.particles);
+    setParticleMode(currentSettings.particles);
     saveSettingsNow();
   });
 });
@@ -900,9 +900,104 @@ document.getElementById("btn-cleanup").addEventListener("click", async () => {
   showToast(t("settings.cleanupDone"));
 });
 
-// ---------- Particules (vue focus) ----------
-const particles = createParticles(document.getElementById("focus-particles"));
-particles.start();
+// ---------- Particules (vue focus, tsParticles) ----------
+// Chaque bundle preset est auto-suffisant (moteur + preset), mais
+// enregistrer un preset APRÈS le tout premier tsParticles.load() échoue
+// ("Register plugins can only be done before calling tsParticles.load()").
+// On enregistre donc les 4 presets une bonne fois pour toutes avant le
+// moindre load().
+const TS_PRESET_BY_MODE = { "ts-snow": "snow", "ts-stars": "stars", "ts-links": "links", "ts-fireworks": "fireworks" };
+// Chaque preset a par défaut un fond opaque (sombre) et des particules
+// assez marquées, pensés pour être LE fond de la page - ça cachait
+// entièrement l'image/vidéo de fond déjà choisie par l'utilisateur. Fond
+// rendu transparent + effectifs/tailles/opacités réduits pour rester un
+// habillage discret par-dessus le fond existant plutôt que le remplacer.
+const TS_OVERRIDES = {
+  snow: {
+    background: { color: { value: "transparent" } },
+    particles: {
+      number: { value: 50 },
+      opacity: { value: { min: 0.1, max: 0.35 } },
+      size: { value: { min: 1, max: 3 } },
+    },
+  },
+  stars: {
+    background: { color: { value: "transparent" } },
+    particles: {
+      number: { value: 60 },
+      opacity: { value: { min: 0.1, max: 0.5 } },
+      size: { value: { min: 0.5, max: 1.6 } },
+    },
+  },
+  links: {
+    background: { color: { value: "transparent" } },
+    particles: {
+      number: { value: 45 },
+      opacity: { value: 0.3 },
+      links: { opacity: 0.2 },
+    },
+  },
+  fireworks: {
+    background: { color: { value: "transparent" } },
+  },
+};
+const focusTsParticles = document.getElementById("focus-tsparticles");
+let tsContainer = null;
+const tsReady = (async () => {
+  await window.loadSnowPreset(window.tsParticles);
+  await window.loadStarsPreset(window.tsParticles);
+  await window.loadLinksPreset(window.tsParticles);
+  await window.loadFireworksPreset(window.tsParticles);
+})();
+
+// tsParticles crée parfois le canvas à la taille par défaut du navigateur
+// (300x150) au lieu de la taille réelle de #focus-tsparticles - observé de
+// façon non déterministe (pas seulement au tout premier chargement), sans
+// rapport clair avec la visibilité/le layout du conteneur au moment du
+// load(). Un simple dispatch de "resize" aide parfois mais pas de façon
+// fiable à coup sûr. On boucle donc dessus (borné) jusqu'à ce que la taille
+// du canvas corresponde réellement au conteneur, avec un correctif direct
+// en dernier recours.
+async function ensureTsCanvasSized(containerEl) {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const canvas = containerEl.querySelector("canvas");
+    if (!canvas) return;
+    const rect = containerEl.getBoundingClientRect();
+    const expectedW = Math.round(rect.width * devicePixelRatio);
+    const expectedH = Math.round(rect.height * devicePixelRatio);
+    if (Math.abs(canvas.width - expectedW) < 2 && Math.abs(canvas.height - expectedH) < 2) return;
+    window.dispatchEvent(new Event("resize"));
+    await new Promise((r) => requestAnimationFrame(r));
+  }
+  const canvas = containerEl.querySelector("canvas");
+  if (canvas) {
+    const rect = containerEl.getBoundingClientRect();
+    canvas.width = Math.round(rect.width * devicePixelRatio);
+    canvas.height = Math.round(rect.height * devicePixelRatio);
+  }
+}
+
+async function setParticleMode(mode) {
+  if (tsContainer) {
+    tsContainer.destroy();
+    tsContainer = null;
+  }
+  const preset = TS_PRESET_BY_MODE[mode];
+  if (preset) {
+    focusTsParticles.classList.remove("hidden");
+    await tsReady;
+    // fullScreen est activé par défaut par tsParticles et ignore alors la
+    // taille du conteneur - désactivé explicitement pour que le canvas
+    // suive #focus-tsparticles (déjà positionné/dimensionné en CSS).
+    tsContainer = await window.tsParticles.load({
+      id: "focus-tsparticles",
+      options: { preset, fullScreen: { enable: false }, ...TS_OVERRIDES[preset] },
+    });
+    await ensureTsCanvasSized(focusTsParticles);
+  } else {
+    focusTsParticles.classList.add("hidden");
+  }
+}
 
 // ---------- Spotify (widget vue focus + aperçu Réglages) ----------
 const spotifyWidget = document.getElementById("spotify-widget");
@@ -949,7 +1044,7 @@ refreshSpotify();
   renderSettingsPresets();
   renderBackgroundPreview();
   applyFocusBackground();
-  particles.setMode(currentSettings.particles);
+  setParticleMode(currentSettings.particles);
 
   currentBlocklist = await window.umbra.getBlocklist();
   renderBlocklist();
