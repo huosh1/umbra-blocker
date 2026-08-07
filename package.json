@@ -1,6 +1,6 @@
 {
   "name": "umbra",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Umbra - bloque apps et sites pendant une session de focus",
   "main": "main.js",
   "author": "Luca Silva",
