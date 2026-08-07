@@ -861,6 +861,10 @@ document.getElementById("input-blur").addEventListener("change", (e) => {
   applyFocusBackground();
   saveSettingsNow();
 });
+document.getElementById("input-sound").addEventListener("change", (e) => {
+  currentSettings.soundEnabled = e.target.checked;
+  saveSettingsNow();
+});
 
 const settingsPresets = document.getElementById("settings-presets");
 function renderSettingsPresets() {
@@ -1095,6 +1099,7 @@ document.getElementById("spotify-btn-next").addEventListener("click", async () =
   document.querySelectorAll(".lang-btn").forEach((b) => b.classList.toggle("active", b.dataset.lang === currentSettings.language));
   document.querySelectorAll(".particle-btn").forEach((b) => b.classList.toggle("active", b.dataset.particles === currentSettings.particles));
   document.getElementById("input-blur").checked = currentSettings.background.blur;
+  document.getElementById("input-sound").checked = currentSettings.soundEnabled !== false;
   renderDurationPresets();
   renderSettingsPresets();
   renderBackgroundPreview();

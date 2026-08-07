@@ -11,7 +11,8 @@
     "watchdog": "electron . --watchdog",
     "challenge": "electron . --challenge",
     "build": "electron-builder --win portable",
-    "build:installer": "electron-builder --win nsis"
+    "build:installer": "electron-builder --win nsis",
+    "test": "node --require ./tests/helpers/stub-electron.js --test tests/*.test.js"
   },
   "devDependencies": {
     "electron": "^33.4.11",
@@ -27,7 +28,8 @@
       "assets/**/*"
     ],
     "asarUnpack": [
-      "**/*.ps1"
+      "**/*.ps1",
+      "assets/sounds/**/*"
     ],
     "extraResources": [
       {
