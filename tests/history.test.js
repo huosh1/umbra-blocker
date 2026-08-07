@@ -61,3 +61,42 @@ test("append() ignores sessions under the 0.1 minute threshold", () => {
   history.append({ kind: "custom", hardMode: false, questName: "real", focusedMinutes: 5 });
   assert.equal(history.load().length, 1);
 });
+
+test("getQuestBreakdown: aggregates minutes by quest name, sorted descending", () => {
+  history.save([
+    { endedAt: daysAgo(0), kind: "custom", hardMode: false, questName: "Thèse", focusedMinutes: 30 },
+    { endedAt: daysAgo(1), kind: "custom", hardMode: false, questName: "Thèse", focusedMinutes: 90 },
+    { endedAt: daysAgo(1), kind: "custom", hardMode: false, questName: "Coréen", focusedMinutes: 45 },
+  ]);
+  const breakdown = history.getQuestBreakdown(7);
+  assert.deepEqual(breakdown, [
+    { questName: "Thèse", minutes: 120 },
+    { questName: "Coréen", minutes: 45 },
+  ]);
+});
+
+test("getQuestBreakdown: entries with an empty quest name fall back to a default label", () => {
+  history.save([{ endedAt: daysAgo(0), kind: "custom", hardMode: false, questName: "", focusedMinutes: 20 }]);
+  assert.deepEqual(history.getQuestBreakdown(7), [{ questName: "Session de focus", minutes: 20 }]);
+});
+
+test("getQuestBreakdown: respects the range window, rangeDays=null means all-time", () => {
+  history.save([
+    { endedAt: daysAgo(0), kind: "custom", hardMode: false, questName: "recent", focusedMinutes: 10 },
+    { endedAt: daysAgo(30), kind: "custom", hardMode: false, questName: "old", focusedMinutes: 10 },
+  ]);
+  assert.deepEqual(history.getQuestBreakdown(7), [{ questName: "recent", minutes: 10 }]);
+  const all = history.getQuestBreakdown(null).sort((a, b) => a.questName.localeCompare(b.questName));
+  assert.deepEqual(all, [
+    { questName: "old", minutes: 10 },
+    { questName: "recent", minutes: 10 },
+  ]);
+});
+
+test("getDailyBreakdown: returns one entry per day over the window, zero-filled", () => {
+  history.save([{ endedAt: daysAgo(0), kind: "custom", hardMode: false, questName: "a", focusedMinutes: 25 }]);
+  const daily = history.getDailyBreakdown(3);
+  assert.equal(daily.length, 3);
+  assert.equal(daily[daily.length - 1].minutes, 25); // aujourd'hui, en dernier
+  assert.equal(daily[0].minutes, 0); // il y a 2 jours, rien
+});

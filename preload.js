@@ -33,6 +33,8 @@ contextBridge.exposeInMainWorld("umbra", {
   testChallenge: () => ipcRenderer.invoke("challenge:test"),
 
   getHistoryStats: () => ipcRenderer.invoke("history:stats"),
+  getQuestBreakdown: (rangeDays) => ipcRenderer.invoke("history:questBreakdown", rangeDays),
+  getDailyBreakdown: (days) => ipcRenderer.invoke("history:dailyBreakdown", days),
 
   getVocab: () => ipcRenderer.invoke("vocab:list"),
   getVocabStats: () => ipcRenderer.invoke("vocab:stats"),

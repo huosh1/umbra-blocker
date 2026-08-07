@@ -71,4 +71,43 @@ function getStats(now = new Date()) {
   };
 }
 
-module.exports = { load, save, append, getStats };
+// Répartition du temps par quête ("Thèse", "Coréen"...) sur une fenêtre
+// donnée - réutilise le champ questName déjà stocké par session, sans
+// imposer un système de tags séparé à apprendre. rangeDays=null => tout
+// l'historique.
+function getQuestBreakdown(rangeDays = 7, now = new Date()) {
+  const entries = load();
+  const sinceTs = rangeDays == null ? 0 : now.getTime() - rangeDays * 24 * 3600 * 1000;
+  const byQuest = new Map();
+  for (const e of entries) {
+    if (e.endedAt < sinceTs) continue;
+    const name = (e.questName || "").trim() || "Session de focus";
+    byQuest.set(name, (byQuest.get(name) || 0) + e.focusedMinutes);
+  }
+  return [...byQuest.entries()]
+    .map(([questName, minutes]) => ({ questName, minutes: Math.round(minutes) }))
+    .sort((a, b) => b.minutes - a.minutes);
+}
+
+// Minutes par jour sur les N derniers jours (inclut les jours à 0, pour un
+// visuel jour par jour régulier plutôt qu'une liste creuse).
+function getDailyBreakdown(days = 14, now = new Date()) {
+  const entries = load();
+  const minutesByDay = new Map();
+  for (const e of entries) minutesByDay.set(dayKey(e.endedAt), (minutesByDay.get(dayKey(e.endedAt)) || 0) + e.focusedMinutes);
+
+  const result = [];
+  const cursor = new Date(now);
+  cursor.setHours(0, 0, 0, 0);
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(cursor);
+    d.setDate(d.getDate() - i);
+    result.push({
+      date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+      minutes: Math.round(minutesByDay.get(dayKey(d.getTime())) || 0),
+    });
+  }
+  return result;
+}
+
+module.exports = { load, save, append, getStats, getQuestBreakdown, getDailyBreakdown };

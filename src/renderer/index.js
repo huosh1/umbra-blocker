@@ -19,6 +19,7 @@ document.querySelectorAll(".side-tab").forEach((btn) => {
     document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById(`tab-${btn.dataset.tab}`).classList.add("active");
+    if (btn.dataset.tab === "stats") refreshStatsTab();
   });
 });
 
@@ -154,6 +155,67 @@ async function refreshHistoryStats() {
   statStreak.textContent = String(stats.streakDays);
   statWeek.textContent = formatStatMinutes(stats.weekMinutes);
 }
+
+// ---------- Stats (onglet dédié) ----------
+let statsQuestRange = "7"; // "7" ou "all" - lu sur le bouton actif
+
+async function renderQuestBreakdown() {
+  const rangeDays = statsQuestRange === "all" ? null : Number(statsQuestRange);
+  const breakdown = await window.umbra.getQuestBreakdown(rangeDays);
+  const el = document.getElementById("quest-breakdown");
+  el.innerHTML = "";
+  if (!breakdown.length) {
+    el.innerHTML = `<div class="stats-empty">${t("stats.empty")}</div>`;
+    return;
+  }
+  const max = breakdown[0].minutes || 1;
+  for (const { questName, minutes } of breakdown) {
+    const row = document.createElement("div");
+    row.className = "quest-row";
+    row.innerHTML = `
+      <span class="quest-row-name" title="${questName}">${questName}</span>
+      <span class="quest-row-bar-wrap"><span class="quest-row-bar" style="width:${Math.max(3, (minutes / max) * 100)}%"></span></span>
+      <span class="quest-row-minutes">${formatStatMinutes(minutes)}</span>
+    `;
+    el.appendChild(row);
+  }
+}
+
+async function renderDailyChart() {
+  const daily = await window.umbra.getDailyBreakdown(14);
+  const el = document.getElementById("daily-breakdown");
+  el.innerHTML = "";
+  const max = Math.max(1, ...daily.map((d) => d.minutes));
+  for (const { date, minutes } of daily) {
+    const day = new Date(date + "T00:00:00");
+    const wrap = document.createElement("div");
+    wrap.className = "daily-bar-wrap";
+    wrap.title = `${date} — ${formatStatMinutes(minutes)}`;
+    wrap.innerHTML = `
+      <span class="daily-bar" style="height:${Math.max(2, (minutes / max) * 100)}%"></span>
+      <span class="daily-bar-label">${day.toLocaleDateString(currentLang === "en" ? "en-US" : "fr-FR", { weekday: "narrow" })}</span>
+    `;
+    el.appendChild(wrap);
+  }
+}
+
+async function refreshStatsTab() {
+  const stats = await window.umbra.getHistoryStats();
+  document.getElementById("stats-tile-today").textContent = formatStatMinutes(stats.todayMinutes);
+  document.getElementById("stats-tile-streak").textContent = String(stats.streakDays);
+  document.getElementById("stats-tile-week").textContent = formatStatMinutes(stats.weekMinutes);
+  document.getElementById("stats-tile-total").textContent = String(stats.totalSessions);
+  await Promise.all([renderQuestBreakdown(), renderDailyChart()]);
+}
+
+document.querySelectorAll('[data-range]').forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll('[data-range]').forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    statsQuestRange = btn.dataset.range;
+    renderQuestBreakdown();
+  });
+});
 
 document.getElementById("btn-start").addEventListener("click", async () => {
   await saveLists();

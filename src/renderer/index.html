@@ -42,6 +42,9 @@
       <button class="side-tab" data-tab="vocab" title="Vocabulaire">
         <svg viewBox="0 0 24 24"><rect x="4" y="3" width="13" height="17" rx="2"/><path d="M8 8h5M8 12h5M8 16h3"/></svg>
       </button>
+      <button class="side-tab" data-tab="stats" title="Statistiques">
+        <svg viewBox="0 0 24 24"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
+      </button>
       <button class="side-tab" data-tab="settings" title="Réglages">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       </button>
@@ -245,6 +248,43 @@
           </div>
           <div id="vocab-list" class="vocab-list"></div>
           <button id="btn-vocab-more" class="btn btn-ghost btn-wide hidden" data-i18n="vocab.loadMore">Charger plus</button>
+        </div>
+      </section>
+
+      <section id="tab-stats" class="tab">
+        <div class="history-stats-bar">
+          <div class="history-stat">
+            <span id="stats-tile-today" class="history-stat-value">0min</span>
+            <span class="history-stat-label" data-i18n="session.statToday">Aujourd'hui</span>
+          </div>
+          <div class="history-stat">
+            <span id="stats-tile-streak" class="history-stat-value">0</span>
+            <span class="history-stat-label" data-i18n="session.statStreak">Jours de série</span>
+          </div>
+          <div class="history-stat">
+            <span id="stats-tile-week" class="history-stat-value">0min</span>
+            <span class="history-stat-label" data-i18n="session.statWeek">Cette semaine</span>
+          </div>
+          <div class="history-stat">
+            <span id="stats-tile-total" class="history-stat-value">0</span>
+            <span class="history-stat-label" data-i18n="stats.totalSessions">Sessions au total</span>
+          </div>
+        </div>
+
+        <div class="card settings-spacing">
+          <div class="card-header">
+            <h2 data-i18n="stats.byQuest">Répartition par quête</h2>
+            <div class="lang-row">
+              <button class="particle-btn active" data-range="7" data-i18n="stats.rangeWeek">Cette semaine</button>
+              <button class="particle-btn" data-range="all" data-i18n="stats.rangeAll">Tout</button>
+            </div>
+          </div>
+          <div id="quest-breakdown" class="quest-breakdown"></div>
+        </div>
+
+        <div class="card settings-spacing">
+          <div class="card-header"><h2 data-i18n="stats.daily">Activité des 14 derniers jours</h2></div>
+          <div id="daily-breakdown" class="daily-chart"></div>
         </div>
       </section>
 

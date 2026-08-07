@@ -402,6 +402,8 @@ function runGuiMode() {
     });
 
     ipcMain.handle("history:stats", () => history.getStats());
+    ipcMain.handle("history:questBreakdown", (e, rangeDays) => history.getQuestBreakdown(rangeDays));
+    ipcMain.handle("history:dailyBreakdown", (e, days) => history.getDailyBreakdown(days));
 
     ipcMain.handle("vocab:list", () => vocab.loadAll());
     ipcMain.handle("vocab:stats", () => vocab.getStats());
