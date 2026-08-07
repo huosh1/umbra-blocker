@@ -20,6 +20,14 @@
 
   <button id="btn-back-to-focus" class="back-to-focus-btn hidden" data-i18n="session.backToFocus">Revenir à la vue focus</button>
 
+  <div id="update-banner" class="update-banner hidden">
+    <span id="update-banner-text"></span>
+    <div class="update-banner-actions">
+      <button id="update-banner-download" class="btn btn-primary btn-sm" data-i18n="update.download">Télécharger</button>
+      <button id="update-banner-dismiss" class="update-banner-dismiss">×</button>
+    </div>
+  </div>
+
   <div class="shell">
     <nav class="sidebar">
       <button class="side-tab active" data-tab="session" title="Session">
@@ -325,6 +333,12 @@
             <button id="btn-export-settings" class="btn btn-ghost btn-sm" data-i18n="settings.export">Exporter</button>
             <button id="btn-import-settings" class="btn btn-ghost btn-sm" data-i18n="settings.importSettings">Importer</button>
           </div>
+        </div>
+
+        <div class="card settings-spacing">
+          <div class="card-header"><h2 data-i18n="update.title">Mises à jour</h2></div>
+          <p class="extension-desc" id="update-version-line"></p>
+          <button id="btn-check-update" class="btn btn-ghost btn-sm" data-i18n="update.check">Vérifier les mises à jour</button>
         </div>
 
         <div class="card settings-spacing">

@@ -107,6 +107,20 @@ progress" screen instead:
 3. Enable **Developer mode**.
 4. Click **Load unpacked** and select the folder that opened.
 
+## Shipping an update
+
+The app checks `https://api.github.com/repos/<repo>/releases/latest` on
+startup (and once a day after that) and shows an in-app banner if a newer
+version is found. For that to have anything to find:
+
+1. Bump `"version"` in `package.json` (semver, no leading `v`).
+2. `git tag vX.Y.Z && git push origin vX.Y.Z`.
+3. Create a GitHub Release from that tag (`gh release create vX.Y.Z` or via
+   the GitHub UI) with the version notes in the release body.
+
+Plain commits to `main` are invisible to the checker - it only looks at
+Releases, not commit history.
+
 ## Project structure
 
 ```

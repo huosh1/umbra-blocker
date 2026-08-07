@@ -900,6 +900,44 @@ document.getElementById("btn-cleanup").addEventListener("click", async () => {
   showToast(t("settings.cleanupDone"));
 });
 
+// ---------- Mises à jour ----------
+const updateBanner = document.getElementById("update-banner");
+const updateBannerText = document.getElementById("update-banner-text");
+const updateVersionLine = document.getElementById("update-version-line");
+let pendingUpdateUrl = null;
+
+function showUpdateBanner(result) {
+  pendingUpdateUrl = result.url;
+  updateBannerText.textContent = t("update.available", { version: result.latestVersion });
+  updateBanner.classList.remove("hidden");
+}
+
+document.getElementById("update-banner-download").addEventListener("click", () => {
+  if (pendingUpdateUrl) window.umbra.openReleasePage(pendingUpdateUrl);
+});
+document.getElementById("update-banner-dismiss").addEventListener("click", () => {
+  updateBanner.classList.add("hidden");
+});
+window.umbra.onUpdateAvailable((result) => showUpdateBanner(result));
+
+document.getElementById("btn-check-update").addEventListener("click", async () => {
+  const btn = document.getElementById("btn-check-update");
+  btn.disabled = true;
+  const result = await window.umbra.checkForUpdate();
+  btn.disabled = false;
+  if (result.available) {
+    showUpdateBanner(result);
+    showToast(t("update.foundToast", { version: result.latestVersion }));
+  } else {
+    showToast(t("update.upToDate"));
+  }
+});
+
+(async () => {
+  const version = await window.umbra.getAppVersion();
+  updateVersionLine.textContent = t("update.versionLine", { version });
+})();
+
 // ---------- Particules (vue focus, tsParticles) ----------
 // Chaque bundle preset est auto-suffisant (moteur + preset), mais
 // enregistrer un preset APRÈS le tout premier tsParticles.load() échoue

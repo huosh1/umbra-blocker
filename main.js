@@ -147,6 +147,7 @@ function runGuiMode() {
     const settings = require("./src/lib/settings");
     const vocab = require("./src/lib/vocab");
     const history = require("./src/lib/history");
+    const updater = require("./src/lib/updater");
     const { WATCHDOG_PID_FILE, EXTENSION_DIR, BACKGROUND_DIR, VOCAB_PROGRESS_FILE } = require("./src/lib/config");
 
     // Le GUI (non élevé) ne peut pas fiablement interroger un process
@@ -271,6 +272,38 @@ function runGuiMode() {
       ])
     );
     tray.on("click", () => { mainWindow.show(); mainWindow.focus(); });
+
+    // Indicateur d'état visible en permanence (pas seulement dans l'onglet
+    // Plage) : la plupart des bugs de blocage débattus cette session
+    // (watchdog mort sans que rien ne l'indique, blocage orphelin, etc.)
+    // se résument à "l'utilisateur ne peut pas savoir si la protection
+    // tourne vraiment" tant qu'il ne va pas fouiller. Un point vert/rouge
+    // sur l'icône système règle ça d'un coup d'œil, fenêtre ouverte ou non.
+    const TRAY_ICON_ACTIVE_PATH = path.join(__dirname, "assets", "icon-tray-active.png");
+    const TRAY_ICON_WARNING_PATH = path.join(__dirname, "assets", "icon-tray-warning.png");
+    function computeProtectionStatus() {
+      const s = session.load();
+      const activePeriods = periodsLib.getActivePeriods(periodsLib.load());
+      const shouldBeProtected = session.isBlockingActive(s) || activePeriods.length > 0;
+      if (!shouldBeProtected) return "idle";
+      return isWatchdogAlive() ? "active" : "warning";
+    }
+    function updateTrayStatus() {
+      const status = computeProtectionStatus();
+      const iconPath =
+        status === "active" ? TRAY_ICON_ACTIVE_PATH :
+        status === "warning" ? TRAY_ICON_WARNING_PATH :
+        ICON_PATH;
+      const icon = nativeImage.createFromPath(iconPath);
+      tray.setImage(icon.isEmpty() ? icon : icon.resize({ width: 16, height: 16 }));
+      tray.setToolTip(
+        status === "active" ? "Umbra — Protection active" :
+        status === "warning" ? "Umbra — Devrait protéger, mais le watchdog ne répond pas" :
+        "Umbra — Focus Blocker"
+      );
+    }
+    updateTrayStatus();
+    setInterval(updateTrayStatus, 5000);
 
     // --- IPC ---
     ipcMain.handle("window:minimize", () => mainWindow.minimize());
@@ -449,6 +482,33 @@ function runGuiMode() {
       spawnElevated(["--cleanup"]);
       return { started: true };
     });
+
+    ipcMain.handle("app:getVersion", () => app.getVersion());
+
+    ipcMain.handle("update:check", async () => {
+      try {
+        return await updater.checkForUpdate(app.getVersion());
+      } catch {
+        return { available: false };
+      }
+    });
+    ipcMain.handle("update:openReleasePage", (e, url) => {
+      if (typeof url === "string" && url.startsWith("https://github.com/")) shell.openExternal(url);
+    });
+
+    // Vérification silencieuse au démarrage (différée pour ne pas ralentir
+    // le lancement) puis une fois par jour tant que l'app tourne - jamais
+    // fatal si hors-ligne ou si aucune release n'a encore été publiée.
+    async function checkForUpdateInBackground() {
+      try {
+        const result = await updater.checkForUpdate(app.getVersion());
+        if (result.available && mainWindow) mainWindow.webContents.send("update:available", result);
+      } catch {
+        // pas grave, retentera au prochain cycle
+      }
+    }
+    setTimeout(checkForUpdateInBackground, 8000);
+    setInterval(checkForUpdateInBackground, 24 * 60 * 60 * 1000);
 
     ipcMain.handle("settings:exportAll", async () => {
       const result = await dialog.showSaveDialog(mainWindow, {

@@ -49,6 +49,11 @@ contextBridge.exposeInMainWorld("umbra", {
   getExtensionPath: () => ipcRenderer.invoke("extension:getPath"),
   openExtensionFolder: () => ipcRenderer.invoke("extension:openFolder"),
 
+  checkForUpdate: () => ipcRenderer.invoke("update:check"),
+  openReleasePage: (url) => ipcRenderer.invoke("update:openReleasePage", url),
+  onUpdateAvailable: (callback) => ipcRenderer.on("update:available", (e, data) => callback(data)),
+  getAppVersion: () => ipcRenderer.invoke("app:getVersion"),
+
   challengeDone: (standalone) =>
     ipcRenderer.send(standalone ? "challenge:done:standalone" : "challenge:done"),
 });
