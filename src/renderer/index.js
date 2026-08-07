@@ -1029,15 +1029,22 @@ refreshSpotify();
 
 document.getElementById("spotify-btn-prev").addEventListener("click", async () => {
   await window.umbra.spotifyControl("previous");
-  setTimeout(refreshSpotify, 300);
+  refreshSpotify(); // pas de délai artificiel avant - chaque appel PowerShell a déjà son propre coût de démarrage
 });
 document.getElementById("spotify-btn-toggle").addEventListener("click", async () => {
+  // Retour visuel immédiat (avant même la fin de la commande réelle) : le
+  // démarrage de PowerShell + l'appel SMTC prennent ~250ms à eux seuls,
+  // attendre la fin puis un refresh (encore ~500ms) donnait une réaction
+  // perceptiblement en retard sur le clic. refreshSpotify() qui suit remet
+  // l'icône dans le vrai état si jamais la commande a échoué.
+  spotifyIconPause.classList.toggle("hidden");
+  spotifyIconPlay.classList.toggle("hidden");
   await window.umbra.spotifyControl("toggle");
-  setTimeout(refreshSpotify, 300);
+  refreshSpotify();
 });
 document.getElementById("spotify-btn-next").addEventListener("click", async () => {
   await window.umbra.spotifyControl("next");
-  setTimeout(refreshSpotify, 300);
+  refreshSpotify();
 });
 
 // ---------- Init ----------
